@@ -1,4 +1,4 @@
-import 'package:cift_teker_front/screens/login_screen.dart';
+import 'package:cift_teker_front/screens/auth_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
-      home: const SignInPage(),
+      home: const AuthPage(),
     );
   }
 }
