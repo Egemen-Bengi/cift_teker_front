@@ -19,6 +19,13 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
+  bool _isMale = true;
+
+  // Samet istediği için böyle kullanıyoz cinsiyet seçimini
+  // String _genderText(){
+  //   return _isMale ? "male" : "female";
+  // }
+
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$');
     return emailRegex.hasMatch(email);
@@ -250,7 +257,30 @@ class _AuthPageState extends State<AuthPage> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('Kız', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: _isMale,
+                                  activeColor: _isMale ? Colors.blue : Colors.pink,
+                                  inactiveThumbColor: _isMale ? Colors.pink : Colors.blue,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _isMale = val;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('Erkek', style: TextStyle(fontSize: 14)),
+                              ],
+                            ),
+                          ],
+                        ),
                       ],
 
                       const SizedBox(height: 8),
