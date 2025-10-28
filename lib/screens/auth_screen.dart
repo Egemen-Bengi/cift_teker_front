@@ -8,7 +8,7 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  bool isSignIn = true; // true -> Giriş, false -> Kayıt
+  bool isSignIn = true;
 
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -19,6 +19,13 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
+  bool _isMale = true;
+
+  // Samet istediği için böyle kullanıyoz cinsiyet seçimini
+  // String _genderText(){
+  //   return _isMale ? "male" : "female";
+  // }
+
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$');
     return emailRegex.hasMatch(email);
@@ -26,7 +33,7 @@ class _AuthPageState extends State<AuthPage> {
 
   bool _isValidPassword(String password) {
     final passwordRegex =
-        RegExp(r'^(?=.*[!@#\$%^&*(),.?":{}|<>]).{5,}$'); // en az 5 ve özel karakter
+        RegExp(r'^(?=.*[!@#\$%^&*(),.?":{}|<>]).{5,}$');
     return passwordRegex.hasMatch(password);
   }
 
@@ -46,10 +53,9 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  void _submitForm() {
+  void _submitSignUp() {
     if (_formKey.currentState!.validate()) {
-      // VERİ TABANINA KAYIT İŞLEMİ BURADA YAPILACAK 
-      // kullanıcı anasayfaya yönlendirilecek
+      // Kayıt başarılı işlemleri (veritabanı, yönlendirme vb.)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Kayıt başarılı!")),
       );
@@ -59,6 +65,32 @@ class _AuthPageState extends State<AuthPage> {
         "Lütfen tüm alanları doğru şekilde doldurun.",
       );
     }
+  }
+
+  void _submitSignIn() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      _showAlertDialog("Hata", "E-posta alanı boş olamaz.");
+      return;
+    }
+    if (!_isValidEmail(email)) {
+      _showAlertDialog("Hata", "Geçerli bir e-posta girin.");
+      return;
+    }
+    if (password.isEmpty) {
+      _showAlertDialog("Hata", "Şifre alanı boş olamaz.");
+      return;
+    }
+    if (!_isValidPassword(password)) {
+      _showAlertDialog(
+        "Hata",
+        "Şifre en az 5 karakter olmalı ve en az bir özel karakter içermelidir.",
+      );
+      return;
+    }
+    // TODO: Burada gerçek giriş (API / Firebase vb.) işlemi yapılır
   }
 
   @override
@@ -84,7 +116,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Switch Butonu
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -106,172 +137,198 @@ class _AuthPageState extends State<AuthPage> {
               ),
               const SizedBox(height: 16),
 
-              // Kart
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text("Email", style: TextStyle(fontSize: 14)),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'E-posta',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value!.isEmpty) return 'E-posta gerekli';
-                        if (!_isValidEmail(value)) {
-                          return 'Geçerli bir e-posta girin';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text("Şifre", style: TextStyle(fontSize: 14)),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Şifre',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                      obscureText: _obscurePassword,
-                      validator: (value) {
-                        if (value!.isEmpty) return 'Şifre gerekli';
-                        if (!_isValidPassword(value)) {
-                          return 'Şifre en az 5 karakter ve özel karakter içermeli';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    if (!isSignIn) ...[
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // İsim ve Soyisim
-                            const Text('İsim - Soyisim', style: TextStyle(fontSize: 14)),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _firstNameController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'İsim',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: (value) =>
-                                        value!.isEmpty ? 'İsim gerekli' : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _lastNameController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Soyisim',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: (value) =>
-                                        value!.isEmpty ? 'Soyisim gerekli' : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            // Telefon numarası
-                            const Text('Telefon Numarası', style: TextStyle(fontSize: 14)),
-                            const SizedBox(height: 4,),
-                            TextFormField(
-                              controller: _phoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Telefon Numarası',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.phone,
-                              validator: (value) =>
-                                  value!.isEmpty ? 'Telefon numarası gerekli' : null,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
+              Form(
+                key: _formKey,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            if (isSignIn) {
-                              // Giriş işlemi (henüz implement edilmedi)
-                            } else {
-                              _submitForm();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text("Email", style: TextStyle(fontSize: 14)),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'E-posta',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'E-posta gerekli';
+                          if (!_isValidEmail(value.trim())) return 'Geçerli bir e-posta girin';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      const Text("Şifre", style: TextStyle(fontSize: 14)),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Şifre',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 40, vertical: 14),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
-                          child: Text(
-                            isSignIn ? "Sign In" : "Sign Up",
-                            style: const TextStyle(fontSize: 16),
+                        ),
+                        obscureText: _obscurePassword,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Şifre gerekli';
+                          if (!_isValidPassword(value)) {
+                            return 'Şifre en az 5 karakter ve özel karakter içermeli';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (!isSignIn) ...[
+                        const Text('İsim - Soyisim', style: TextStyle(fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _firstNameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'İsim',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (!isSignIn) {
+                                    if (value == null || value.trim().isEmpty) return 'İsim gerekli';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _lastNameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Soyisim',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (!isSignIn) {
+                                    if (value == null || value.trim().isEmpty) return 'Soyisim gerekli';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Telefon Numarası', style: TextStyle(fontSize: 14)),
+                        const SizedBox(height: 4),
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Telefon Numarası',
+                            border: OutlineInputBorder(),
                           ),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (!isSignIn) {
+                              if (value == null || value.trim().isEmpty) return 'Telefon numarası gerekli';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('Kız', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Switch(
+                                  value: _isMale,
+                                  activeColor: _isMale ? Colors.blue : Colors.pink,
+                                  inactiveThumbColor: _isMale ? Colors.pink : Colors.blue,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _isMale = val;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('Erkek', style: TextStyle(fontSize: 14)),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (isSignIn)
-                      GestureDetector(
-                        onTap: () {
-                          // Şifre sıfırlama ekranı
-                        },
-                        child: const Center(
-                          child: Text(
-                            'Forgot password?',
-                            style: TextStyle(
-                              decoration: TextDecoration.underline,
-                              color: Colors.black87,
+
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              if (isSignIn) {
+                                _submitSignIn();
+                              } else {
+                                _submitSignUp();
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 14),
+                            ),
+                            child: Text(
+                              isSignIn ? "Sign In" : "Sign Up",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (isSignIn)
+                        GestureDetector(
+                          onTap: () {
+                            // Şifre sıfırlama ekranı
+                          },
+                          child: const Center(
+                            child: Text(
+                              'Forgot password?',
+                              style: TextStyle(
+                                decoration: TextDecoration.underline,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
