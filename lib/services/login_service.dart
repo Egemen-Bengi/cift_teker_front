@@ -1,20 +1,47 @@
-import 'package:dio/dio.dart';
-import '../models/login_request.dart';
-import '../models/login_response.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+import '../models/requests/login_request.dart';
+import '../models/responses/login_response.dart';
+import '../models/requests/updatePassword_request.dart';
+import '../../core/models/api_response.dart';
 
 class LoginService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/auth"));
+  final String baseUrl = "http://localhost:8081/auth";
 
-  Future<LoginResponse> login(LoginRequest request) async {
-    try {
-      final response = await _dio.post('/login', data: request.toJson());
-      return LoginResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception('Login failed: ${e.response?.data}');
-      } else {
-        throw Exception('Network error: ${e.message}');
-      }
+  Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
+    final url = Uri.parse("$baseUrl/login");
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(request.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      return ApiResponse.fromJson(jsonDecode(response.body),LoginResponse.fromJson);
+    } else {
+      throw Exception("Login failed: ${response.statusCode}");
+    }
+  }
+  // update password kismi eksikti eklendi
+  Future<String> updatePassword(
+      UpdatePasswordRequest request, String token) async {
+    final url = Uri.parse("$baseUrl/updatePassword");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      return response.body; 
+    } else {
+      throw Exception("Password update failed: ${response.statusCode}");
     }
   }
 }
