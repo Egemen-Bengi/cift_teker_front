@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/screens/event_create_page.dart';
 import 'package:flutter/material.dart';
 
 class AuthPage extends StatefulWidget {
@@ -91,6 +92,11 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
     // TODO: Burada gerçek giriş (API / Firebase vb.) işlemi yapılır
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const EventCreatePage()),
+      (route) => false,
+    );
   }
 
   @override
