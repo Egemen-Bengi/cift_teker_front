@@ -33,6 +33,24 @@ class SharedRouteService {
     }
   }
 
+  // listeleme 
+  Future<List<SharedRouteResponse>> getSharedRoutes(String token) async {
+    try {
+      final response = await _dio.get(
+        "/me",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      final List<dynamic> objectList = response.data["object"];
+      return objectList
+          .map((e) => SharedRouteResponse.fromJson(e))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // hata yakalama
   Exception _handleError(DioException e) {
     if (e.response != null) {
       return Exception(
