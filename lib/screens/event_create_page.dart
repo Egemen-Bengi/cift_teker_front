@@ -1,7 +1,6 @@
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 class EventCreatePage extends StatefulWidget {
   const EventCreatePage({super.key});
@@ -17,8 +16,6 @@ class _EventCreatePageState extends State<EventCreatePage> {
   final TextEditingController endTimeController = TextEditingController();
 
   DateTime? selectedDate;
-  TimeOfDay? startTime;
-  TimeOfDay? endTime;
 
   Future<void> pickDate() async {
     final today = DateTime.now();
@@ -34,51 +31,22 @@ class _EventCreatePageState extends State<EventCreatePage> {
     }
   }
 
-  Future<void> pickStartTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() => startTime = picked);
-    }
-  }
-
-  Future<void> pickEndTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() => endTime = picked);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
 
       appBar: AppBar(
-        backgroundColor: const Color(0xFF4FA3D1),
+        backgroundColor: Colors.white,
         centerTitle: true,
         title: const Text(
           "Çift Teker",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
-            color: Colors.white,
+            color: Colors.black,
           ),
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.black),
-            ),
-          ),
-        ],
       ),
 
       body: SingleChildScrollView(
@@ -92,7 +60,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              //Etkinlik Başlığı
+              
               TextField(
                 controller: titleController,
                 textAlign: TextAlign.center,
@@ -116,12 +84,12 @@ class _EventCreatePageState extends State<EventCreatePage> {
 
               const SizedBox(height: 20),
 
-              // Açıklama
               const Text("Etkinlik Açıklaması",
                   style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               TextField(
                 controller: descriptionController,
+                maxLines: 3,
                 decoration: InputDecoration(
                   hintText: "Açıklama giriniz",
                   border: OutlineInputBorder(
@@ -132,39 +100,6 @@ class _EventCreatePageState extends State<EventCreatePage> {
 
               const SizedBox(height: 20),
 
-              // Lokasyon
-              const Text("Lokasyon",
-                  style: TextStyle(fontWeight: FontWeight.w500)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Başlangıç",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Bitiş",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Tarih
               const Text("Başlangıç Tarihi",
                   style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
@@ -181,7 +116,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                     child: Text(
                       selectedDate == null
                           ? "Tarih seç"
-                          : DateFormat("MMM d, yyyy").format(selectedDate!),
+                          : "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
@@ -190,9 +125,8 @@ class _EventCreatePageState extends State<EventCreatePage> {
 
               const SizedBox(height: 20),
 
-              // Saat
               const Text("Başlangıç ve Bitiş Saati",
-              style: TextStyle(fontWeight: FontWeight.w500)),
+                  style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
 
               Row(
@@ -237,17 +171,6 @@ class _EventCreatePageState extends State<EventCreatePage> {
             ],
           ),
         ),
-      ),
-
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle, size: 36), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: ""),
-        ],
       ),
     );
   }
