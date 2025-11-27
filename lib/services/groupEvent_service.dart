@@ -8,7 +8,6 @@ class EventService {
 
   Future<ApiResponse<GroupEventResponse>> createGroupEvent(
       GroupEventRequest request, String token) async {
-
     final response = await _dio.post(
       "/event/group",
       data: request.toJson(),
