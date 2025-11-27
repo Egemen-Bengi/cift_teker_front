@@ -4,7 +4,7 @@ import '../models/responses/user_response.dart';
 import '../../core/models/api_response.dart';
 
 class UserService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/user"));
+  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/user"));
 
   Future<ApiResponse<UserResponse>> saveUser(UserRequest request, String userRole) async {
     try {

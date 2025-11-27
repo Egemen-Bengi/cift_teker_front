@@ -3,7 +3,7 @@ import '../models/responses/groupEventParticipant_response.dart';
 
 class GroupEventParticipantService {
   final Dio _dio = Dio(
-    BaseOptions(baseUrl: "http://localhost:8081/group-event-participants"),
+    BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/group-event-participants"),
   );
 
   // etkinliğe katılma

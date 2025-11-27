@@ -3,7 +3,7 @@ import '../models/responses/rating_response.dart';
 import '../../core/models/api_response.dart';
 
 class RatingService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/ratings"));
+  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ratings"));
 
   // sharedRouteId ve ratingValue ile rating kaydetme
   Future<ApiResponse<RatingResponse>> saveRating(

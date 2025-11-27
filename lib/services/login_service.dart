@@ -7,7 +7,7 @@ import '../models/requests/updatePassword_request.dart';
 import '../../core/models/api_response.dart';
 
 class LoginService {
-  final String baseUrl = "http://localhost:8081/auth";
+  final String baseUrl = "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/auth";
 
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
     final url = Uri.parse("$baseUrl/login");

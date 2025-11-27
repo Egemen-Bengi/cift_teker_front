@@ -3,7 +3,7 @@ import '../models/requests/sharedRoute_request.dart';
 import '../models/responses/sharedRoute_response.dart';
 
 class SharedRouteService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/shared-routes"));
+  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/shared-routes"));
 
   // kaydetme
   Future<SharedRouteResponse> saveSharedRoute(
