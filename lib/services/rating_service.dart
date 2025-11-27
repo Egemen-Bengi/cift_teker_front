@@ -1,33 +1,33 @@
 import 'package:dio/dio.dart';
-import '../models/responses/like_response.dart';
+import '../models/responses/rating_response.dart';
 import '../../core/models/api_response.dart';
 
-class LikeService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/likes"));
+class RatingService {
+  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/ratings"));
 
-  // like kaydetme
-  Future<ApiResponse<LikeResponse>> saveLike(
-      int sharedRouteId, String token) async {
+  // sharedRouteId ve ratingValue ile rating kaydetme
+  Future<ApiResponse<RatingResponse>> saveRating(
+      int sharedRouteId, double ratingValue, String token) async {
     try {
       final response = await _dio.post(
-        '/saveLike/$sharedRouteId',
+        '/saveRating/$sharedRouteId/$ratingValue',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       return ApiResponse.fromJson(
         response.data,
-        (json) => LikeResponse.fromJson(json),
+        (json) => RatingResponse.fromJson(json),
       );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // silme
-  Future<ApiResponse<String>> deleteLike(int likeId, String token) async {
+  //  silme
+  Future<ApiResponse<String>> deleteRating(int ratingId, String token) async {
     try {
       final response = await _dio.delete(
-        '/deleteLike/$likeId',
+        '/deleteRating/$ratingId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
