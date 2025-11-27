@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 class CommentService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "http://10.0.2.2:8080/comments", // Backend adresin
+      baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/comments",
       headers: {"Content-Type": "application/json"},
     ),
   );

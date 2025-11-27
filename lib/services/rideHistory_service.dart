@@ -5,7 +5,7 @@ import '../models/responses/rideHistory_response.dart';
 class RideHistoryService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "http://localhost:8081/ride-history",
+      baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ride-history",
       connectTimeout: Duration(seconds: 5),
       receiveTimeout: Duration(seconds: 5),
     ),

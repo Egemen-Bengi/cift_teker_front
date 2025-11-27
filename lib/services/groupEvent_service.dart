@@ -4,7 +4,7 @@ import '../models/responses/groupEvent_response.dart';
 import '../../core/models/api_response.dart';
 
 class EventService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081"));
+  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com"));
 
   // Yeni grup etkinliği oluşturma
   Future<ApiResponse<GroupEventResponse>> createGroupEvent(

@@ -3,7 +3,7 @@ import '../models/responses/like_response.dart';
 import '../../core/models/api_response.dart';
 
 class LikeService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/likes"));
+  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/likes"));
 
   // like kaydetme
   Future<ApiResponse<LikeResponse>> saveLike(
