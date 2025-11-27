@@ -1,0 +1,43 @@
+import 'package:dio/dio.dart';
+import '../models/requests/sharedRoute_request.dart';
+import '../models/responses/sharedRoute_response.dart';
+
+class SharedRouteService {
+  final Dio _dio = Dio(BaseOptions(baseUrl: "http://localhost:8081/shared-routes"));
+
+  // kaydetme
+  Future<SharedRouteResponse> saveSharedRoute(
+      SharedRouteRequest request, String token) async {
+    try {
+      final response = await _dio.post(
+        "/saveRoute",
+        data: request.toJson(),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      return SharedRouteResponse.fromJson(response.data["object"]);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // silme
+  Future<String> deleteSharedRoute(int sharedRouteId, String token) async {
+    try {
+      final response = await _dio.delete(
+        "/deleteRoute/$sharedRouteId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      return response.data["message"];
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Exception _handleError(DioException e) {
+    if (e.response != null) {
+      return Exception(
+          "API Error: ${e.response?.statusCode} - ${e.response?.data}");
+    }
+    return Exception("Bağlantı hatası: ${e.message}");
+  }
+}
