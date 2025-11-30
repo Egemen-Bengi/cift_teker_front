@@ -1,16 +1,18 @@
 import 'dart:convert';
+import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
 import 'package:http/http.dart' as http;
-
 import '../models/requests/login_request.dart';
 import '../models/responses/login_response.dart';
-import '../models/requests/updatePassword_request.dart';
-import '../../core/models/api_response.dart';
 
 class LoginService {
-  final String baseUrl = "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/auth";
+  final String baseUrl =
+      "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/auth";
 
-  Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
+  /// Login işlemi
+  Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse("$baseUrl/login");
+
+    print("Request Body: ${jsonEncode(request.toJson())}");
 
     final response = await http.post(
       url,
@@ -18,13 +20,28 @@ class LoginService {
       body: jsonEncode(request.toJson()),
     );
 
+    print("Response status: ${response.statusCode}");
+    print("Response body: ${response.body}");
+
     if (response.statusCode == 200) {
-      return ApiResponse.fromJson(jsonDecode(response.body),LoginResponse.fromJson);
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final loginData = LoginResponse.fromJson(body);
+
+      if (loginData.token == null || loginData.token!.isEmpty) {
+        throw Exception("Token boş, login başarısız");
+      }
+
+      return loginData;
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception(
+          "Login failed: ${response.statusCode} - ${response.body}");
     } else {
-      throw Exception("Login failed: ${response.statusCode}");
+      throw Exception(
+          "Login failed: ${response.statusCode} - ${response.body}");
     }
   }
-  // update password kismi eksikti eklendi
+
+  /// Şifre güncelleme
   Future<String> updatePassword(
       UpdatePasswordRequest request, String token) async {
     final url = Uri.parse("$baseUrl/updatePassword");
@@ -39,9 +56,10 @@ class LoginService {
     );
 
     if (response.statusCode == 200) {
-      return response.body; 
+      return response.body;
     } else {
-      throw Exception("Password update failed: ${response.statusCode}");
+      throw Exception(
+          "Password update failed: ${response.statusCode} - ${response.body}");
     }
   }
 }

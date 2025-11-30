@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_null_comparison, use_build_context_synchronously
+// ignore_for_file: unnecessary_null_comparison, use_build_context_synchronously, avoid_print, curly_braces_in_flow_control_structures, unnecessary_brace_in_string_interps, unused_local_variable
 
 import 'package:cift_teker_front/models/requests/login_request.dart';
 import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
@@ -7,6 +7,7 @@ import 'package:cift_teker_front/models/requests/user_request.dart';
 import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/user_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -31,8 +32,8 @@ class _AuthPageState extends State<AuthPage> {
 
   bool _isMale = true;
 
-  String _genderText(){
-    return _isMale ? "male" : "female";
+  String _genderText() {
+    return _isMale ? "MALE" : "FEMALE";
   }
 
   bool _isValidEmail(String email) {
@@ -40,9 +41,14 @@ class _AuthPageState extends State<AuthPage> {
     return emailRegex.hasMatch(email);
   }
 
+  bool _isValidUsername(String username) {
+    final regex = RegExp(r'^[A-Za-z0-9_]{4,15}$');
+    return regex.hasMatch(username);
+  }
+
   bool _isValidPassword(String password) {
-    final passwordRegex =
-        RegExp(r'^(?=.*[!@#\$%^&*(),.?":{}|<>]).{5,}$');
+    // Only require minimum length 5; no special character required anymore
+    final passwordRegex = RegExp(r'^.{5,}$');
     return passwordRegex.hasMatch(password);
   }
 
@@ -84,23 +90,7 @@ class _AuthPageState extends State<AuthPage> {
         phoneNumber: _phoneController.text.trim(),
         gender: _genderText(),
       );
-
-      // API çağrısı
-      final response = await userService.saveUser(request, "/register/USER");
-
-      if (!mounted) return;
-
-      final welcomeName = response.data != null && response.data.username != null
-          ? response.data.username
-          : _usernameController.text.trim();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Kayıt başarılı! Hoş geldin $welcomeName"),
-        ),
-      );
-
-      // Başarılı kayıt sonrası ana ekrana yönlendir
+        
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -108,6 +98,7 @@ class _AuthPageState extends State<AuthPage> {
       );
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Kayıt başarısız: ${e.toString()}")),
       );
@@ -115,55 +106,72 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   // Giriş işlemini LoginService ile yapan fonksiyon
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
+
   void _submitSignIn() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+  final username = _usernameController.text.trim();
+  final password = _passwordController.text;
 
-    if (email.isEmpty) {
-      _showAlertDialog("Hata", "E-posta alanı boş olamaz.");
-      return;
-    }
-    if (!_isValidEmail(email)) {
-      _showAlertDialog("Hata", "Geçerli bir e-posta girin.");
-      return;
-    }
-    if (password.isEmpty) {
-      _showAlertDialog("Hata", "Şifre alanı boş olamaz.");
-      return;
-    }
-    if (!_isValidPassword(password)) {
-      _showAlertDialog(
-        "Hata",
-        "Şifre en az 5 karakter olmalı ve en az bir özel karakter içermelidir.",
-      );
-      return;
-    }
-
-    try {
-      final loginService = LoginService();
-      final resp = await loginService.login(
-        LoginRequest(password: password, username: _usernameController.text.trim()),
-      );
-
-      if (!mounted) return;
-
-      final userName = resp.data?.username ?? email;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Giriş başarılı! Hoş geldin $userName")),
-      );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigation()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Giriş başarısız: ${e.toString()}")),
-      );
-    }
+  if (username.isEmpty) {
+    _showAlertDialog("Hata", "Kullanıcı adı alanı boş olamaz.");
+    return;
   }
+  if (!_isValidUsername(username)) {
+    _showAlertDialog("Hata", "Geçerli bir kullanıcı adı girin.");
+    return;
+  }
+  if (password.isEmpty) {
+    _showAlertDialog("Hata", "Şifre alanı boş olamaz.");
+    return;
+  }
+  if (!_isValidPassword(password)) {
+    _showAlertDialog("Hata", "Şifre en az 5 karakter olmalı.");
+    return;
+  }
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    final loginService = LoginService();
+    final resp = await loginService.login(
+      LoginRequest(username: username, password: password),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    final token = resp.token;
+    if (token != null && token.isNotEmpty) {
+      await storage.write(key: "auth_token", value: token);
+    } else {
+      throw Exception("Token boş, login başarısız");
+    }
+
+    final userName = resp.username ?? "Kullanıcı";
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Giriş başarılı! Hoş geldin $userName")),
+    );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const MainNavigation()),
+      (route) => false,
+    );
+  } catch (e) {
+    if (!mounted) return;
+    Navigator.pop(context); // loading kapat
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Giriş başarısız: ${e.toString()}")),
+    );
+  }
+}
+
 
   // Şifremi unuttum dialog'u: token + eski şifre + yeni şifre alıp LoginService.updatePassword çağırır
   Future<void> _showForgotPasswordDialog() async {
@@ -204,14 +212,19 @@ class _AuthPageState extends State<AuthPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: confirmController,
-                decoration: const InputDecoration(labelText: "Yeni Şifre (Tekrar)"),
+                decoration: const InputDecoration(
+                  labelText: "Yeni Şifre (Tekrar)",
+                ),
                 obscureText: true,
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal"),
+          ),
           ElevatedButton(
             onPressed: () async {
               final token = tokenController.text.trim();
@@ -236,13 +249,19 @@ class _AuthPageState extends State<AuthPage> {
                 return;
               }
               if (!_isValidPassword(newPass)) {
-                _showAlertDialog("Hata", "Şifre en az 5 karakter ve özel karakter içermeli.");
+                _showAlertDialog(
+                  "Hata",
+                  "Şifre en az 5 karakter olmalı.",
+                );
                 return;
               }
 
               try {
                 final loginService = LoginService();
-                final req = UpdatePasswordRequest(oldPassword: oldPass, newPassword: newPass);
+                final req = UpdatePasswordRequest(
+                  oldPassword: oldPass,
+                  newPassword: newPass,
+                );
                 await loginService.updatePassword(req, token);
 
                 if (!mounted) return;
@@ -252,7 +271,10 @@ class _AuthPageState extends State<AuthPage> {
                 );
               } catch (e) {
                 if (!mounted) return;
-                _showAlertDialog("Hata", "Şifre güncelleme başarısız: ${e.toString()}");
+                _showAlertDialog(
+                  "Hata",
+                  "Şifre güncelleme başarısız: ${e.toString()}",
+                );
               }
             },
             child: const Text("Güncelle"),
@@ -279,10 +301,7 @@ class _AuthPageState extends State<AuthPage> {
               const SizedBox(height: 12),
               const Text(
                 'Çift Teker',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 24),
               Row(
@@ -324,18 +343,28 @@ class _AuthPageState extends State<AuthPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text("Email", style: TextStyle(fontSize: 14)),
+                      const Text(
+                        "Kullanıcı Adı",
+                        style: TextStyle(fontSize: 14),
+                      ),
                       const SizedBox(height: 4),
                       TextFormField(
-                        controller: _emailController,
+                        controller: _usernameController,
                         decoration: const InputDecoration(
-                          labelText: 'E-posta',
+                          labelText: 'Kullanıcı Adı',
                           border: OutlineInputBorder(),
                         ),
-                        keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'E-posta gerekli';
-                          if (!_isValidEmail(value.trim())) return 'Geçerli bir e-posta girin';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Kullanıcı adı gerekli';
+                          }
+                          final username = value.trim();
+                          if (username.length < 4 || username.length > 15) {
+                            return 'Kullanıcı adı 4-15 karakter arasında olmalıdır';
+                          }
+                          if (!_isValidUsername(username)) {
+                            return 'Sadece harf, rakam ve alt tire (_) kullanabilirsiniz';
+                          }
                           return null;
                         },
                       ),
@@ -364,7 +393,7 @@ class _AuthPageState extends State<AuthPage> {
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Şifre gerekli';
                           if (!_isValidPassword(value)) {
-                            return 'Şifre en az 5 karakter ve özel karakter içermeli';
+                            return 'Şifre en az 5 karakter olmalı';
                           }
                           return null;
                         },
@@ -372,7 +401,10 @@ class _AuthPageState extends State<AuthPage> {
                       const SizedBox(height: 16),
 
                       if (!isSignIn) ...[
-                        const Text('İsim - Soyisim', style: TextStyle(fontSize: 14)),
+                        const Text(
+                          'İsim - Soyisim',
+                          style: TextStyle(fontSize: 14),
+                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -385,7 +417,8 @@ class _AuthPageState extends State<AuthPage> {
                                 ),
                                 validator: (value) {
                                   if (!isSignIn) {
-                                    if (value == null || value.trim().isEmpty) return 'İsim gerekli';
+                                    if (value == null || value.trim().isEmpty)
+                                      return 'İsim gerekli';
                                   }
                                   return null;
                                 },
@@ -401,7 +434,8 @@ class _AuthPageState extends State<AuthPage> {
                                 ),
                                 validator: (value) {
                                   if (!isSignIn) {
-                                    if (value == null || value.trim().isEmpty) return 'Soyisim gerekli';
+                                    if (value == null || value.trim().isEmpty)
+                                      return 'Soyisim gerekli';
                                   }
                                   return null;
                                 },
@@ -411,24 +445,33 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        const Text("Kullanıcı Adı", style: TextStyle(fontSize: 14)),
+                        const Text("E-Mail", style: TextStyle(fontSize: 14)),
                         TextFormField(
-                          controller: _usernameController,
+                          controller: _emailController,
                           decoration: const InputDecoration(
-                            labelText: 'Kullanıcı Adı',
+                            labelText: 'E-Mail',
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (!isSignIn) {
-                              if (value == null || value.trim().isEmpty) return 'Kullanıcı adı gerekli';
-                              if (value.trim().length < 3) return 'En az 3 karakter girin';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'E-mail gerekli';
+                              }
+                              final email = value.trim();
+                              if (!_isValidEmail(email)) {
+                                return 'Geçerli bir e-mail adresi girin';
+                              }
                             }
                             return null;
                           },
                         ),
+
                         const SizedBox(height: 16),
 
-                        const Text('Telefon Numarası', style: TextStyle(fontSize: 14)),
+                        const Text(
+                          'Telefon Numarası',
+                          style: TextStyle(fontSize: 14),
+                        ),
                         const SizedBox(height: 4),
                         TextFormField(
                           controller: _phoneController,
@@ -439,7 +482,8 @@ class _AuthPageState extends State<AuthPage> {
                           keyboardType: TextInputType.phone,
                           validator: (value) {
                             if (!isSignIn) {
-                              if (value == null || value.trim().isEmpty) return 'Telefon numarası gerekli';
+                              if (value == null || value.trim().isEmpty)
+                                return 'Telefon numarası gerekli';
                             }
                             return null;
                           },
@@ -450,12 +494,19 @@ class _AuthPageState extends State<AuthPage> {
                           children: [
                             Row(
                               children: [
-                                const Text('Kız', style: TextStyle(fontSize: 14)),
+                                const Text(
+                                  'Kız',
+                                  style: TextStyle(fontSize: 14),
+                                ),
                                 const SizedBox(width: 8),
                                 Switch(
                                   value: _isMale,
-                                  activeColor: _isMale ? Colors.blue : Colors.pink,
-                                  inactiveThumbColor: _isMale ? Colors.pink : Colors.blue,
+                                  activeColor: _isMale
+                                      ? Colors.blue
+                                      : Colors.pink,
+                                  inactiveThumbColor: _isMale
+                                      ? Colors.pink
+                                      : Colors.blue,
                                   onChanged: (val) {
                                     setState(() {
                                       _isMale = val;
@@ -463,7 +514,10 @@ class _AuthPageState extends State<AuthPage> {
                                   },
                                 ),
                                 const SizedBox(width: 8),
-                                const Text('Erkek', style: TextStyle(fontSize: 14)),
+                                const Text(
+                                  'Erkek',
+                                  style: TextStyle(fontSize: 14),
+                                ),
                               ],
                             ),
                           ],
@@ -489,7 +543,9 @@ class _AuthPageState extends State<AuthPage> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 14),
+                                horizontal: 40,
+                                vertical: 14,
+                              ),
                             ),
                             child: Text(
                               isSignIn ? "Sign In" : "Sign Up",
