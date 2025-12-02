@@ -9,6 +9,7 @@ class GroupEventResponse {
   final String endLocation;
   final int maxParticipants;
   final int userId;
+  final String city;
 
   GroupEventResponse({
     required this.groupEventId,
@@ -21,6 +22,7 @@ class GroupEventResponse {
     required this.endLocation,
     required this.maxParticipants,
     required this.userId,
+    required this.city,
   });
 
   factory GroupEventResponse.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class GroupEventResponse {
       endLocation: json["endLocation"],
       maxParticipants: json["maxParticipants"],
       userId: json["userId"],
+      city: json["city"],
     );
   }
 }
