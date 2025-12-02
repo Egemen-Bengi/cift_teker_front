@@ -1,6 +1,9 @@
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
+import 'package:cift_teker_front/models/requests/groupEvent_request.dart';
+import 'package:cift_teker_front/services/groupEvent_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class EventCreatePage extends StatefulWidget {
   const EventCreatePage({super.key});
@@ -10,6 +13,8 @@ class EventCreatePage extends StatefulWidget {
 }
 
 class _EventCreatePageState extends State<EventCreatePage> {
+  final TextEditingController startLocationController = TextEditingController();
+  final TextEditingController endLocationController = TextEditingController();
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController startTimeController = TextEditingController();
@@ -242,6 +247,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                     children: [
                       Expanded(
                         child: TextField(
+                          controller: startLocationController,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.location_on_outlined,
                                 color: Colors.orangeAccent),
@@ -257,6 +263,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
+                          controller: endLocationController,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.flag_outlined,
                                 color: Colors.orangeAccent),
@@ -278,35 +285,93 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        final text = capacityController.text.trim();
-                        if (text.isEmpty) {
+                      onPressed: () async {
+                        // Zorunlu alanları kontrol et
+                        if (titleController.text.isEmpty ||
+                            descriptionController.text.isEmpty ||
+                            startLocationController.text.isEmpty ||
+                            endLocationController.text.isEmpty ||
+                            selectedDate == null ||
+                            startTimeController.text.isEmpty ||
+                            endTimeController.text.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Katılımcı sayısını girin.")),
+                            const SnackBar(content: Text("Lütfen tüm alanları doldurun.")),
                           );
+                          print('title: ${titleController.text}');
+                          print('description: ${descriptionController.text}');
+                          print('startLocation: ${startLocationController.text}');
+                          print('endLocation: ${endLocationController.text}');
+                          print('selectedDate: ${selectedDate}');
+                          print('startTime: ${startTimeController.text}');
+                          print('endTime: ${endTimeController.text}');
                           return;
                         }
-                        final value = int.tryParse(text);
-                        if (value == null) {
+
+                        // Katılımcı sayısı
+                        final maxP = int.tryParse(capacityController.text.trim());
+                        if (maxP == null || maxP <= 0 || maxP > 50) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Geçerli bir sayı girin.")),
-                          );
-                          return;
-                        }
-                        if (value == 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Katılımcı sayısı 0 olamaz.")),
-                          );
-                          return;
-                        }
-                        if (value > 50) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Katılımcı sayısı en fazla 50 olabilir.")),
+                            const SnackBar(content: Text("Katılımcı sayısı 1-50 arasında olmalıdır.")),
                           );
                           return;
                         }
 
-                        // Geçerli ise etkinlik oluşturma mantığı buraya
+                        // Saatleri parse et (HH:MM)
+                        final startParts = startTimeController.text.split(":");
+                        final endParts = endTimeController.text.split(":");
+
+                        final startDateTime = DateTime(
+                          selectedDate!.year,
+                          selectedDate!.month,
+                          selectedDate!.day,
+                          int.parse(startParts[0]),
+                          int.parse(startParts[1]),
+                        );
+
+                        final endDateTime = DateTime(
+                          selectedDate!.year,
+                          selectedDate!.month,
+                          selectedDate!.day,
+                          int.parse(endParts[0]),
+                          int.parse(endParts[1]),
+                        );
+
+                        // Request objesi
+                        final request = GroupEventRequest(
+                          title: titleController.text,
+                          description: descriptionController.text,
+                          startDateTime: startDateTime,
+                          endDateTime: endDateTime,
+                          startLocation: startLocationController.text,
+                          endLocation: endLocationController.text,
+                          maxParticipants: maxP,
+                        );
+
+                        try {
+                          final storage = const FlutterSecureStorage();
+                          final token = await storage.read(key: "auth_token");
+
+                          final response = await EventService().createGroupEvent(request, token!);
+
+                          print('RESPONSE: ${response}');
+                          if (response == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Etkinlik başarıyla oluşturuldu!")),
+                            );
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(builder: (context) => SocialMediaPage()),
+                            // );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(response.message)),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Hata: $e")),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orangeAccent,
@@ -329,5 +394,17 @@ class _EventCreatePageState extends State<EventCreatePage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    startLocationController.dispose();
+    endLocationController.dispose();
+    titleController.dispose();
+    descriptionController.dispose();
+    startTimeController.dispose();
+    endTimeController.dispose();
+    capacityController.dispose();
+    super.dispose();
   }
 }
