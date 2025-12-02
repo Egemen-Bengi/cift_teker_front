@@ -11,17 +11,11 @@ class LoginService {
   /// Login işlemi
   Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse("$baseUrl/login");
-
-    print("Request Body: ${jsonEncode(request.toJson())}");
-
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(request.toJson()),
     );
-
-    print("Response status: ${response.statusCode}");
-    print("Response body: ${response.body}");
 
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
