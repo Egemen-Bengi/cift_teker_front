@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/responses/groupEvent_response.dart';
 
 class EventCard extends StatelessWidget {
-  const EventCard({super.key});
+  final GroupEventResponse event;
+
+  const EventCard({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
@@ -9,22 +12,20 @@ class EventCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ----------- ÜST BAR (Kullanıcı adı + Menü) -----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                /// Kullanıcı Adı
                 Row(
                   children: [
                     const Icon(Icons.person, size: 18, color: Colors.grey),
                     const SizedBox(width: 6),
                     Text(
-                      "Kullanıcı Adı",
+                      "Kullanıcı ID: ${event.userId}",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -33,74 +34,67 @@ class EventCard extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                /// Üç Nokta Menüsü
                 IconButton(
-                  icon: const Icon(Icons.more_vert),
                   onPressed: () {},
+                  icon: const Icon(Icons.more_vert),
                   padding: EdgeInsets.zero,
                 ),
               ],
             ),
-          ),
 
-          // ----------- GÖRSEL ALANI -----------
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.zero,
-                bottom: Radius.zero,
-              ),
-            ),
-            child: const Center(
-              child: Icon(Icons.image, size: 50, color: Colors.black26),
-            ),
-          ),
+            const SizedBox(height: 10),
 
-          // ----------- ETKİNLİK BİLGİLERİ -----------
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Text(
+              event.title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              "${event.startDateTime} - ${event.endDateTime}",
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
               children: [
-                Text(
-                  "Etkinlik Başlığı",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                Text(
-                  "Konum, katılımcı bilgileri",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  "etkinlik açıklaması",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
+                const Icon(Icons.location_on_outlined, size: 18),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    "${event.startLocation} → ${event.endLocation}",
+                    style: const TextStyle(fontSize: 14),
                   ),
                 ),
               ],
             ),
-          ),
 
-          // ----------- ALT BUTONLAR (Like / Comment / Share) -----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+            const SizedBox(height: 10),
+
+            if (event.description != null)
+              Text(
+                event.description!,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                const Icon(Icons.people_alt_outlined, size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  "${event.maxParticipants} katılımcı",
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
               children: [
                 IconButton(
                   onPressed: () {},
@@ -116,8 +110,8 @@ class EventCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
