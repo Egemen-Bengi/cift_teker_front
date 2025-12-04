@@ -13,6 +13,7 @@ class EventCreatePage extends StatefulWidget {
 }
 
 class _EventCreatePageState extends State<EventCreatePage> {
+  final TextEditingController cityController = TextEditingController();
   final TextEditingController startLocationController = TextEditingController();
   final TextEditingController endLocationController = TextEditingController();
   final TextEditingController titleController = TextEditingController();
@@ -243,41 +244,62 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: startLocationController,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.location_on_outlined,
-                                color: Colors.orangeAccent),
-                            labelText: "Başlangıç Konumu",
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                // Şehir
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: cityController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r"[a-zA-ZığüşöçİĞÜŞÖÇ\s]")
+                          ),
+                        ],
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.location_city, color: Colors.orangeAccent),
+                          labelText: "Şehr",
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: endLocationController,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.flag_outlined,
-                                color: Colors.orangeAccent),
-                            labelText: "Bitiş Konumu",
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: startLocationController,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.location_on_outlined,
+                              color: Colors.orangeAccent),
+                          labelText: "Başlangıç Konumu",
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: endLocationController,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.flag_outlined,
+                              color: Colors.orangeAccent),
+                          labelText: "Bitiş Konumu",
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
                   const SizedBox(height: 30),
 
@@ -288,6 +310,8 @@ class _EventCreatePageState extends State<EventCreatePage> {
                       onPressed: () async {
                         // Zorunlu alanları kontrol et
                         if (titleController.text.isEmpty ||
+                            capacityController.text.isEmpty ||
+                            cityController.text.isEmpty ||
                             descriptionController.text.isEmpty ||
                             startLocationController.text.isEmpty ||
                             endLocationController.text.isEmpty ||
@@ -304,6 +328,8 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           print('selectedDate: ${selectedDate}');
                           print('startTime: ${startTimeController.text}');
                           print('endTime: ${endTimeController.text}');
+                          print('capacity: ${capacityController.text}');
+                          print('city: ${cityController.text}');
                           return;
                         }
 
@@ -345,6 +371,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           startLocation: startLocationController.text,
                           endLocation: endLocationController.text,
                           maxParticipants: maxP,
+                          city: cityController.text,
                         );
 
                         try {
@@ -353,7 +380,6 @@ class _EventCreatePageState extends State<EventCreatePage> {
 
                           final response = await EventService().createGroupEvent(request, token!);
 
-                          print('RESPONSE: ${response}');
                           if (response == true) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Etkinlik başarıyla oluşturuldu!")),
