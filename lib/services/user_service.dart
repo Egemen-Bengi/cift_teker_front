@@ -14,7 +14,6 @@ class UserService {
   // kayıt olma
   Future<ApiResponse<UserResponse>> saveUser(UserRequest request, String userRole) async {
     try {
-      // kullanıcı rolü
       final response = await _dio.post(
         '/register/$userRole',
         data: request.toJson(),

@@ -5,9 +5,8 @@ class UserResponse {
   final String surname;
   final String email;
   final String role;
-  final String profile_image;
-  final DateTime created_at;
-  
+  final String? profileImage; 
+  final DateTime createdAt;  
 
   UserResponse({
     required this.userId,
@@ -16,8 +15,8 @@ class UserResponse {
     required this.surname,
     required this.email,
     required this.role,
-    required this.profile_image,
-    required this.created_at,
+    required this.profileImage,
+    required this.createdAt,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -28,8 +27,8 @@ class UserResponse {
       surname: json['surname'],
       email: json['email'],
       role: json['role'],
-      profile_image: json['profile_image'],
-      created_at: json['created_at'],
+      profileImage: json['profileImage'], 
+      createdAt: DateTime.parse(json['createdAt']), 
     );
   }
 }
