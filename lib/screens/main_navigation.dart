@@ -1,5 +1,6 @@
 import 'package:cift_teker_front/screens/event_create_page.dart';
 import 'package:cift_teker_front/screens/profil_page.dart';
+import 'package:cift_teker_front/screens/home_page.dart';
 import 'package:flutter/material.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -13,7 +14,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    Center(child: Text("Ana Sayfa")),   // 0
+    HomePage(),                       // 0
     ProfilePage(),                     // 1
     EventCreatePage(),                 // 2
   ];
