@@ -6,6 +6,7 @@ class GroupEventRequest {
   final String startLocation;
   final String endLocation;
   final int maxParticipants;
+  final String city;
 
   GroupEventRequest({
     required this.title,
@@ -15,6 +16,7 @@ class GroupEventRequest {
     required this.startLocation,
     required this.endLocation,
     required this.maxParticipants,
+    required this.city,
   });
 
   Map<String, dynamic> toJson() {
@@ -26,6 +28,7 @@ class GroupEventRequest {
       "startLocation": startLocation,
       "endLocation": endLocation,
       "maxParticipants": maxParticipants,
+      "city": city,
     };
   }
 }
