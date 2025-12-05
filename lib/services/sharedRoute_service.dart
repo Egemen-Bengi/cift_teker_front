@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:dio/dio.dart';
 import '../models/requests/sharedRoute_request.dart';
 import '../models/responses/sharedRoute_response.dart';
@@ -12,7 +13,9 @@ class SharedRouteService {
 
   // Yeni rota kaydetme
   Future<SharedRouteResponse> saveSharedRoute(
-      SharedRouteRequest request, String token) async {
+    SharedRouteRequest request,
+    String token,
+  ) async {
     try {
       final response = await _dio.post(
         "/saveRoute",
@@ -55,19 +58,21 @@ class SharedRouteService {
     }
   }
 
-  // Tüm rotaları listeleme 
-  Future<List<SharedRouteResponse>> getAllSharedRoutes(String token) async {
-    try {
-      final response = await _dio.get(
-        "/all",
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
+  // Tüm rotaları listeleme
+  Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
+    String token,
+  ) async {
+    final response = await _dio.get(
+      "/all",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
 
-      final List list = response.data["object"];
-      return list.map((e) => SharedRouteResponse.fromJson(e)).toList();
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
+    return ApiResponse.fromJson(
+      response.data,
+      (jsonList) => (jsonList as List)
+          .map((e) => SharedRouteResponse.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
   }
 
   // Hata yönetimi

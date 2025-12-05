@@ -5,6 +5,7 @@ class SharedRouteResponse {
   final String? imageUrl;
   final DateTime createdAt;
   final int userId;
+  final String username;
   final int historyId;
 
   SharedRouteResponse({
@@ -14,6 +15,7 @@ class SharedRouteResponse {
     this.imageUrl,
     required this.createdAt,
     required this.userId,
+    required this.username,
     required this.historyId,
   });
 
@@ -25,6 +27,7 @@ class SharedRouteResponse {
       imageUrl: json["imageUrl"],
       createdAt: DateTime.parse(json["createdAt"]),
       userId: json["userId"],
+      username: json["username"],
       historyId: json["historyId"],
     );
   }

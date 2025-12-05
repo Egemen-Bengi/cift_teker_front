@@ -42,7 +42,7 @@ class _ParticipantPageState extends State<ParticipantPage> {
       appBar: AppBar(
         title: const Text("Katılımcılar"),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.white,
       ),
       body: Container(
         decoration: BoxDecoration(color: Colors.white),

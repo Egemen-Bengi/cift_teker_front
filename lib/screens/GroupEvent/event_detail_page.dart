@@ -82,7 +82,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       appBar: AppBar(
         title: Text(widget.event.title),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
