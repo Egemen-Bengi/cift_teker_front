@@ -11,16 +11,16 @@ class GroupEventParticipantService {
 
   // Etkinliğe katılma
   Future<GroupEventParticipantResponse> joinEvent(
-      int groupEventId, String token) async {
+    int groupEventId,
+    String token,
+  ) async {
     try {
       final response = await _dio.post(
         "/join/$groupEventId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return GroupEventParticipantResponse.fromJson(
-        response.data["object"],
-      );
+      return GroupEventParticipantResponse.fromJson(response.data["object"]);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -38,16 +38,18 @@ class GroupEventParticipantService {
     }
   }
 
-  // Etkinlik katılımcılarını getirme 
+  // Etkinlik katılımcılarını getirme
   Future<List<GroupEventParticipantResponse>> getParticipants(
-      int groupEventId, String token) async {
+    int groupEventId,
+    String token,
+  ) async {
     try {
       final response = await _dio.get(
         "/get/$groupEventId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      List list = response.data["object"];
+      final List<dynamic> list = response.data["object"];
 
       return list
           .map((item) => GroupEventParticipantResponse.fromJson(item))
