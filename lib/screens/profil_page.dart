@@ -1,7 +1,10 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:cift_teker_front/models/requests/updateUsername_request.dart';
 import 'package:cift_teker_front/models/responses/user_response.dart';
+import 'package:cift_teker_front/screens/auth_screen.dart';
+import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/user_service.dart';
+import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -21,23 +24,22 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _futureUser = _loadUser();
   }
 
-  Future<void> _loadUser() async {
+  void _goBackToHome() {
+    final mainNavState = context.findAncestorStateOfType<MainNavigationState>();
+    mainNavState?.onItemTapped(0);
+  }
+
+  Future<ApiResponse<UserResponse>> _loadUser() async {
     final token = await _storage.read(key: "auth_token");
 
     if (token == null || token.isEmpty) {
-      return mounted
-          ? setState(() {
-              _futureUser = Future.error("Kullanıcı doğrulaması başarısız.");
-            })
-          : null;
+      return Future.error("Kullanıcı doğrulaması başarısız.");
     }
 
-    setState(() {
-      _futureUser = _userService.getMyInfo(token);
-    });
+    return _userService.getMyInfo(token);
   }
 
   void _updateUsername(UserResponse user) {
@@ -89,6 +91,41 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _logout() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Çıkış Yap"),
+        content: const Text("Çıkış yapmak istediğine emin misin?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+
+              await _storage.delete(key: "auth_token");
+
+              if (!mounted) return;
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AuthPage()),
+              );
+            },
+            child: const Text("Evet, Çıkış Yap"),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Bilgileri gösteren satır widget
   Widget _infoRow(String title, String value) {
     return Padding(
@@ -113,16 +150,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // AppBar BottomNav ile uyumlu şekilde sade tutuldu
-      appBar: AppBar(
-        title: const Text(
-          "Profil",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 1,
+      appBar: CustomAppBar(
+        title: "Profil",
+        showBackButton: true,
+        onBackButtonPressed: _goBackToHome,
+        showAvatar: false,
       ),
-
       body: FutureBuilder<ApiResponse<UserResponse>>(
         future: _futureUser,
         builder: (context, snapshot) {
@@ -212,6 +245,27 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: const Text(
                       "Kullanıcı Adını Güncelle",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _logout,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Çıkış Yap",
                       style: TextStyle(fontSize: 16),
                     ),
                   ),

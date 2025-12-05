@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/groupEvent_service.dart';
@@ -21,33 +22,23 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _futureEvents = _loadEvents();
   }
 
-  Future<void> _loadEvents() async {
+  Future<ApiResponse<List<GroupEventResponse>>> _loadEvents() async {
     final token = await _storage.read(key: "auth_token");
 
     if (token == null || token.isEmpty) {
-      return mounted
-          ? setState(() {
-              _futureEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-            })
-          : null;
+      return Future.error("Kullanıcı doğrulaması başarısız.");
     }
 
-    setState(() {
-      _futureEvents = _eventService.getAllGroupEvents(token);
-    });
+    return _eventService.getAllGroupEvents(token);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Çift Teker"),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-      ),
+      appBar: const CustomAppBar(title: "Çift Teker"),
       body: FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
         future: _futureEvents,
         builder: (context, snapshot) {
