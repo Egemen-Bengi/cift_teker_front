@@ -25,7 +25,7 @@ class EventCard extends StatelessWidget {
                     const Icon(Icons.person, size: 18, color: Colors.grey),
                     const SizedBox(width: 6),
                     Text(
-                      "Kullanıcı ID: ${event.userId}",
+                      "Kullanıcı Adı: ${event.username}",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,

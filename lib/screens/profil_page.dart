@@ -1,4 +1,9 @@
+import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/models/requests/updateUsername_request.dart';
+import 'package:cift_teker_front/models/responses/user_response.dart';
+import 'package:cift_teker_front/services/user_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -8,14 +13,35 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  String username = "Egemenbengi17";
-  final String firstName = "Egemen";
-  final String lastName = "Bengi";
-  final String email = "egemenbengi@gmail.com";
+  final UserService _userService = UserService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  void _updateUsername() {
-    final TextEditingController usernameController =
-        TextEditingController(text: username);
+  late Future<ApiResponse<UserResponse>> _futureUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final token = await _storage.read(key: "auth_token");
+
+    if (token == null || token.isEmpty) {
+      return mounted
+          ? setState(() {
+              _futureUser = Future.error("Kullanıcı doğrulaması başarısız.");
+            })
+          : null;
+    }
+
+    setState(() {
+      _futureUser = _userService.getMyInfo(token);
+    });
+  }
+
+  void _updateUsername(UserResponse user) {
+    final usernameController = TextEditingController(text: user.username);
 
     showDialog(
       context: context,
@@ -34,15 +60,27 @@ class _ProfilePageState extends State<ProfilePage> {
             child: const Text("İptal"),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                username = usernameController.text.trim();
-              });
+            onPressed: () async {
               Navigator.pop(context);
+              final newUsername = usernameController.text.trim();
+              final token = await _storage.read(key: "auth_token");
+              if (token == null) return;
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Kullanıcı adı güncellendi!")),
-              );
+              try {
+                await _userService.updateUsername(
+                  UpdateUsernameRequest(newUsername: newUsername),
+                  token,
+                );
+                _loadUser();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Kullanıcı adı güncellendi!")),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+              }
             },
             child: const Text("Güncelle"),
           ),
@@ -58,10 +96,14 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          Text(value,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+          ),
         ],
       ),
     );
@@ -77,83 +119,107 @@ class _ProfilePageState extends State<ProfilePage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white, 
+        backgroundColor: Colors.white,
         elevation: 1,
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // PROFIL FOTOĞRAFI
-            const CircleAvatar(
-              radius: 80,
-              backgroundImage: AssetImage('assets/ciftTeker.png'),
-            ),
+      body: FutureBuilder<ApiResponse<UserResponse>>(
+        future: _futureUser,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 20),
+          if (snapshot.hasError || snapshot.data == null) {
+            return Center(
+              child: Text("Hata: ${snapshot.error ?? "Bilinmeyen hata"}"),
+            );
+          }
 
-            // İSİM + SOYİSİM
-            Text(
-              "$firstName $lastName",
-              style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
+          final user = snapshot.data!.data;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // PROFIL FOTOĞRAFI
+                CircleAvatar(
+                  radius: 80,
+                  backgroundImage: user.profileImage != null
+                      ? NetworkImage(user.profileImage!)
+                      : const AssetImage("assets/ciftTeker.png")
+                            as ImageProvider,
+                ),
 
-            Text(
-              email,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+                const SizedBox(height: 20),
 
-            const SizedBox(height: 30),
-
-            // PROFİL BİLGİLERİ KARTI
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
+                // İSİM + SOYİSİM
+                Text(
+                  "${user.name} ${user.surname}",
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _infoRow("Kullanıcı Adı", username),
-                  const Divider(),
-                  _infoRow("Mail Adresi", email),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // Kullanıcı adı güncelle butonu
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _updateUsername,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text(
-                  "Kullanıcı Adını Güncelle",
-                  style: TextStyle(fontSize: 16),
+                const SizedBox(height: 6),
+
+                Text(
+                  user.email,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
-              ),
+
+                const SizedBox(height: 30),
+
+                // PROFİL BİLGİLERİ KARTI
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _infoRow("Kullanıcı Adı", user.username),
+                      const Divider(),
+                      _infoRow("Mail Adresi", user.email),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // Kullanıcı adı güncelle butonu
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _updateUsername(user),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 24,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Kullanıcı Adını Güncelle",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

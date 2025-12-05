@@ -9,6 +9,7 @@ class GroupEventResponse {
   final String endLocation;
   final int maxParticipants;
   final int userId;
+  final String? username;
   final String? city;
 
   GroupEventResponse({
@@ -22,6 +23,7 @@ class GroupEventResponse {
     required this.endLocation,
     required this.maxParticipants,
     required this.userId,
+    this.username,
     this.city,
   });
 
@@ -37,6 +39,7 @@ class GroupEventResponse {
       endLocation: json["endLocation"],
       maxParticipants: json["maxParticipants"],
       userId: json["userId"],
+      username: json["username"],
       city: json["city"],
     );
   }

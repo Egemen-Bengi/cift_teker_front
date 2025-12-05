@@ -23,7 +23,10 @@ class UserService {
         data: request.toJson(),
       );
 
-      return ApiResponse.fromJson(response.data, (json) => UserResponse.fromJson(json as Map<String, dynamic>));
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       if (e.response != null) {
         throw Exception(
@@ -47,7 +50,10 @@ class UserService {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return ApiResponse.fromJson(response.data, (json) => UserResponse.fromJson(json as Map<String, dynamic>));
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       if (e.response != null) {
         throw Exception(
@@ -71,7 +77,33 @@ class UserService {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return ApiResponse.fromJson(response.data, (json) => UserResponse.fromJson(json as Map<String, dynamic>));
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          "API Error: ${e.response?.statusCode} - ${e.response?.data}",
+        );
+      } else {
+        throw Exception("Bağlantı hatası: ${e.message}");
+      }
+    }
+  }
+
+  // giriş yapmış kullanıcının bilgilerini getirme
+  Future<ApiResponse<UserResponse>> getMyInfo(String token) async {
+    try {
+      final response = await _dio.get(
+        '/me',
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       if (e.response != null) {
         throw Exception(
