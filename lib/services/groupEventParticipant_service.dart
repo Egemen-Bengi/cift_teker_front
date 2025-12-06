@@ -3,12 +3,17 @@ import '../models/responses/groupEventParticipant_response.dart';
 
 class GroupEventParticipantService {
   final Dio _dio = Dio(
-    BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/group-event-participants"),
+    BaseOptions(
+      baseUrl:
+          "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/group-event-participants",
+    ),
   );
 
-  // etkinliğe katılma
+  // Etkinliğe katılma
   Future<GroupEventParticipantResponse> joinEvent(
-      int groupEventId, String token) async {
+    int groupEventId,
+    String token,
+  ) async {
     try {
       final response = await _dio.post(
         "/join/$groupEventId",
@@ -21,7 +26,7 @@ class GroupEventParticipantService {
     }
   }
 
-  // etkinlikten ayrılma
+  // Etkinlikten ayrılma
   Future<void> leaveEvent(int groupEventId, String token) async {
     try {
       await _dio.delete(
@@ -33,14 +38,19 @@ class GroupEventParticipantService {
     }
   }
 
-  // etkinlik katılımcılarını getirme
+  // Etkinlik katılımcılarını getirme
   Future<List<GroupEventParticipantResponse>> getParticipants(
-      int groupEventId) async {
+    int groupEventId,
+    String token,
+  ) async {
     try {
-      final response = await _dio.get("/get/$groupEventId");
+      final response = await _dio.get(
+        "/get/$groupEventId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
-      List<dynamic> list = response.data["object"];
-      
+      final List<dynamic> list = response.data["object"];
+
       return list
           .map((item) => GroupEventParticipantResponse.fromJson(item))
           .toList();

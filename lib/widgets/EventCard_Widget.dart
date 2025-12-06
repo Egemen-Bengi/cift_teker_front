@@ -1,123 +1,112 @@
+import 'package:cift_teker_front/screens/GroupEvent/event_detail_page.dart';
 import 'package:flutter/material.dart';
+import '../models/responses/groupEvent_response.dart';
 
 class EventCard extends StatelessWidget {
-  const EventCard({super.key});
+  final GroupEventResponse event;
+
+  const EventCard({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ----------- ÜST BAR (Kullanıcı adı + Menü) -----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                /// Kullanıcı Adı
-                Row(
-                  children: [
-                    const Icon(Icons.person, size: 18, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Text(
-                      "Kullanıcı Adı",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.grey[800],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 18, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        event.username,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.grey[800],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-
-                /// Üç Nokta Menüsü
-                IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-          ),
-
-          // ----------- GÖRSEL ALANI -----------
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.zero,
-                bottom: Radius.zero,
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.more_vert),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
-            ),
-            child: const Center(
-              child: Icon(Icons.image, size: 50, color: Colors.black26),
-            ),
-          ),
 
-          // ----------- ETKİNLİK BİLGİLERİ -----------
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Etkinlik Başlığı",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+              const SizedBox(height: 10),
+
+              Text(
+                event.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                "${event.startDateTime} - ${event.endDateTime}",
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  const Icon(Icons.location_on_outlined, size: 18),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      "${event.startLocation} → ${event.endLocation}",
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
+                ],
+              ),
 
+              const SizedBox(height: 10),
+
+              if (event.description != null)
                 Text(
-                  "Konum, katılımcı bilgileri",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                  event.description!,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                ),
+
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  const Icon(Icons.people_alt_outlined, size: 18),
+                  const SizedBox(width: 4),
+                  Text(
+                    "${event.maxParticipants} katılımcı",
+                    style: const TextStyle(fontSize: 14),
                   ),
-                ),
+                ],
+              ),
 
-                const SizedBox(height: 8),
-
-                Text(
-                  "etkinlik açıklaması",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
+              const SizedBox(height: 10),
+            ],
           ),
-
-          // ----------- ALT BUTONLAR (Like / Comment / Share) -----------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.favorite_border),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.chat_bubble_outline),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.share_outlined),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -5,7 +5,9 @@ import '../../core/models/api_response.dart';
 
 class EventService {
   final Dio _dio = Dio(
-    BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com"),
+    BaseOptions(
+      baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com",
+    ),
   );
 
   // Yeni grup etkinliği oluşturma
@@ -19,12 +21,13 @@ class EventService {
 
     return ApiResponse.fromJson(
       response.data,
-      (json) => GroupEventResponse.fromJson(json),
+      (json) => GroupEventResponse.fromJson(json as Map<String, dynamic>),
     );
   }
 
   // Giriş yapmış kullanıcının grup etkinliklerini listeleme
-  Future<ApiResponse<List<GroupEventResponse>>> getMyGroupEvents(String token) async {
+  Future<ApiResponse<List<GroupEventResponse>>> getMyGroupEvents(
+      String token) async {
     final response = await _dio.get(
       "/event/me",
       options: Options(headers: {"Authorization": "Bearer $token"}),
@@ -33,20 +36,23 @@ class EventService {
     return ApiResponse.fromJson(
       response.data,
       (jsonList) => (jsonList as List)
-          .map((json) => GroupEventResponse.fromJson(json))
+          .map((json) => GroupEventResponse.fromJson(json as Map<String, dynamic>))
           .toList(),
     );
   }
 
-  // Tüm grup etkinliklerini listeleme (public)
-  Future<ApiResponse<List<GroupEventResponse>>> getAllGroupEvents() async {
-    final response = await _dio.get("/event/all");
+  Future<ApiResponse<List<GroupEventResponse>>> getAllGroupEvents(
+    String token) async {
+  final response = await _dio.get(
+    "/event/all",
+    options: Options(headers: {"Authorization": "Bearer $token"}),
+  );
 
-    return ApiResponse.fromJson(
-      response.data,
-      (jsonList) => (jsonList as List)
-          .map((json) => GroupEventResponse.fromJson(json))
-          .toList(),
-    );
-  }
+  return ApiResponse.fromJson(
+    response.data,
+    (jsonList) => (jsonList as List)
+        .map((e) => GroupEventResponse.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+}
 }

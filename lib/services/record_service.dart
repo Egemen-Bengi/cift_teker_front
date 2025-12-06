@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/responses/record_response.dart';
-import '../models/api_response.dart';
+import '../core/models/api_response.dart';
 
 class RecordService {
   final String baseUrl =
@@ -23,7 +23,7 @@ class RecordService {
     if (response.statusCode == 200) {
       return ApiResponse.fromJson(
         jsonDecode(response.body),
-        RecordResponse.fromJson,
+        (json) => RecordResponse.fromJson(json as Map<String, dynamic>),
       );
     } else {
       throw Exception(
