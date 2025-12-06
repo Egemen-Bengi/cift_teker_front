@@ -32,6 +32,22 @@ class _ProfilePageState extends State<ProfilePage> {
     mainNavState?.onItemTapped(0);
   }
 
+  void _showAlertDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<ApiResponse<UserResponse>> _loadUser() async {
     final token = await _storage.read(key: "auth_token");
 
@@ -58,37 +74,89 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              usernameController.dispose();
+              Navigator.pop(context);
+            },
             child: const Text("İptal"),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
               final newUsername = usernameController.text.trim();
+
+              if (newUsername.isEmpty) {
+                usernameController.dispose();
+                Navigator.pop(context);
+                if (!mounted) return;
+                _showAlertDialog("Hata", "Kullanıcı adı boş olamaz.");
+                return;
+              }
+
+              // Loading dialog göster
+              if (!mounted) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
               final token = await _storage.read(key: "auth_token");
-              if (token == null) return;
+
+              if (!mounted) return;
+              Navigator.pop(context); // Loading dialog kapat
+
+              if (token == null || token.isEmpty) {
+                usernameController.dispose();
+                if (!mounted) return;
+                _showAlertDialog("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+                return;
+              }
 
               try {
-                await _userService.updateUsername(
+                final updateResponse = await _userService.updateUsername(
                   UpdateUsernameRequest(newUsername: newUsername),
                   token,
                 );
-                _loadUser();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Kullanıcı adı güncellendi!")),
-                );
+                usernameController.dispose();
+
+                if (!mounted) return;
+                Navigator.pop(context); // Update dialog'u kapat
+
+                // Başarılıysa state'i güncelle ve sayfayı yenile
+                if (updateResponse.message.toLowerCase().contains("success") || 
+                    updateResponse.httpStatus == "200") {
+                  setState(() {
+                    _futureUser = _loadUser();
+                  });
+                  
+                  _showAlertDialog("Başarılı", "Kullanıcı adınız güncellendi.");
+                } else {
+                  _showAlertDialog("Hata", "Kullanıcı adı güncellenemedi: ${updateResponse.message}");
+                }
               } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+                usernameController.dispose();
+
+                if (!mounted) return;
+                
+                // Dialog açıksa kapat
+                try {
+                  Navigator.pop(context);
+                } catch (_) {}
+
+                _showAlertDialog("Hata", "Kullanıcı adı güncellenirken hata oluştu: ${e.toString()}");
               }
             },
             child: const Text("Güncelle"),
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Dialog kapandığında controller'ı dispose et
+      try {
+        usernameController.dispose();
+      } catch (_) {}
+    });
   }
 
   Future<void> _logout() async {

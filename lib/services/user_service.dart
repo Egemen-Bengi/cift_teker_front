@@ -39,7 +39,7 @@ class UserService {
   }
 
   // kullanıcı adı güncelleme
-  Future<ApiResponse<UserResponse>> updateUsername(
+  Future<ApiResponse<UserResponse?>> updateUsername(
     UpdateUsernameRequest request,
     String token,
   ) async {
@@ -52,18 +52,18 @@ class UserService {
 
       return ApiResponse.fromJson(
         response.data,
-        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+        (json) => UserResponse.fromJson(json),
       );
+
     } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception(
-          "API Error: ${e.response?.statusCode} - ${e.response?.data}",
-        );
-      } else {
-        throw Exception("Bağlantı hatası: ${e.message}");
-      }
+      return ApiResponse(
+        message: "Hata: ${e.response?.data ?? e.message}",
+        data: null,
+        httpStatus: e.response?.statusCode.toString(),
+      );
     }
   }
+
 
   // profil resmi güncelleme
   Future<ApiResponse<UserResponse>> updateProfileImage(
