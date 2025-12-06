@@ -16,94 +16,139 @@ class EventCard extends StatelessWidget {
           MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
         );
       },
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white, // Kartın tüm arka planı beyaz
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              /// USERNAME + MENU ICON
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.person, size: 18, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        event.username,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.grey[800],
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade600,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person,
+                            size: 16, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          event.username,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.more_vert),
-                    padding: EdgeInsets.zero,
-                  ),
+                  Icon(Icons.more_vert, color: Colors.grey[700]),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
 
+              /// TITLE
               Text(
                 event.title,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
                 ),
               ),
 
               const SizedBox(height: 6),
 
-              Text(
-                "${event.startDateTime} - ${event.endDateTime}",
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-              ),
-
-              const SizedBox(height: 10),
-
+              /// DATE RANGE
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 18),
-                  const SizedBox(width: 4),
+                  Icon(Icons.calendar_today,
+                      size: 18, color: Colors.orange.shade700),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      "${event.startLocation} → ${event.endLocation}",
-                      style: const TextStyle(fontSize: 14),
+                      "${event.startDateTime} - ${event.endDateTime}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              if (event.description != null)
-                Text(
-                  event.description!,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                ),
-
-              const SizedBox(height: 10),
-
+              /// LOCATION
               Row(
                 children: [
-                  const Icon(Icons.people_alt_outlined, size: 18),
-                  const SizedBox(width: 4),
-                  Text(
-                    "${event.maxParticipants} katılımcı",
-                    style: const TextStyle(fontSize: 14),
+                  Icon(Icons.location_on_outlined,
+                      size: 18, color: Colors.orange.shade700),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      "${event.startLocation} → ${event.endLocation}",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+
+              /// DESCRIPTION
+              if (event.description != null)
+                Text(
+                  event.description!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
+                ),
+
+              const SizedBox(height: 12),
+
+              /// PARTICIPANTS
+              Row(
+                children: [
+                  Icon(Icons.people_alt_outlined,
+                      size: 18, color: Colors.orange.shade700),
+                  const SizedBox(width: 6),
+                  Text(
+                    "${event.maxParticipants} katılımcı",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
             ],
           ),
         ),

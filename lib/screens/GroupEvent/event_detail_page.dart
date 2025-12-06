@@ -33,13 +33,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
     try {
       await _participantService.joinEvent(widget.event.groupEventId, token);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Etkinliğe katıldınız!")));
+      showAlertDialog(context, "Başarılı", "Etkinliğe katıldınız");
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+      showAlertDialog(context, "Hata", "Etkinliğe katılırken bir hata oluştu. Etkinlik dolmuş olabilir veya zaten katılmış olabilirsiniz.");
     }
 
     setState(() => _isLoading = false);
@@ -54,13 +50,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
     try {
       await _participantService.leaveEvent(widget.event.groupEventId, token);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Etkinlikten ayrıldınız.")));
+      showAlertDialog(context,"Başarılı" ,"Etkinlikten ayrıldınız.");
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+      showAlertDialog(context,"Hata" ,"Çıkmak için ilk önce giriş yapmalısınız.");
     }
 
     setState(() => _isLoading = false);
@@ -117,6 +109,25 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 ],
               ),
             ),
+    );
+  }
+  void showAlertDialog(BuildContext context, String title , String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Tamam"),
+            ),
+          ],
+        );
+      },
     );
   }
 

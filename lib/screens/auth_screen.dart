@@ -76,55 +76,70 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-      try {
-        final userService = UserService();
+    // Loading dialog göster
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
-        final request = UserRequest(
-          username: _usernameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          name: _firstNameController.text.trim(),
-          surname: _lastNameController.text.trim(),
-          phoneNumber: _phoneController.text.trim(),
-          gender: _genderText(),
-        );
+    try {
+      final userService = UserService();
 
-        final response = await userService.saveUser(request, "USER");
-        
-        if (response.message == "Register successful") {
-          if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: const Text(
-                  "Kayıt Başarılı",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                content: const Text("Lütfen giriş yapın."),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text("Tamam"),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
+      final request = UserRequest(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        name: _firstNameController.text.trim(),
+        surname: _lastNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        gender: _genderText(),
+      );
+
+      final response = await userService.saveUser(request, "USER");
+
+      if (!mounted) return;
+      Navigator.pop(context); // Loading dialog kapat
+
+      if (response.message == "Register successful") {
         if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Kayıt başarısız: ${e.toString()}")),
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                "Kayıt Başarılı",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: const Text("Lütfen giriş yapın."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      isSignIn = true;
+                    });
+                  },
+                  child: const Text("Tamam"),
+                ),
+              ],
+            );
+          },
         );
+      } else {
+        if (!mounted) return;
+        _showAlertDialog("Hata", "Kayıt başarısız oldu");
       }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Loading dialog kapat
+
+      _showAlertDialog("Hata", "Kayıt olurken istenmeyen bir hata oluştu");
     }
+  }
 
   // Giriş işlemini LoginService ile yapan fonksiyon
   final FlutterSecureStorage storage = const FlutterSecureStorage();
@@ -174,10 +189,6 @@ class _AuthPageState extends State<AuthPage> {
 
       final userName = resp.username ?? "Kullanıcı";
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Giriş başarılı! Hoş geldin $userName")),
-      );
-
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -187,9 +198,7 @@ class _AuthPageState extends State<AuthPage> {
       if (!mounted) return;
       Navigator.pop(context); // loading kapat
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Giriş başarısız: ${e.toString()}")),
-      );
+      _showAlertDialog("Hata", "Giriş yapılırken bir hata oluştu");
     }
   }
 
@@ -287,14 +296,15 @@ class _AuthPageState extends State<AuthPage> {
 
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Şifre başarıyla güncellendi.")),
+                _showAlertDialog(
+                  "Başarılı",
+                  "Şifreniz başarıyla güncellendi.",
                 );
               } catch (e) {
                 if (!mounted) return;
                 _showAlertDialog(
                   "Hata",
-                  "Şifre güncelleme başarısız: ${e.toString()}",
+                  "Şifre güncelleme başarısız",
                 );
               }
             },
