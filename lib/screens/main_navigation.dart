@@ -1,25 +1,29 @@
 import 'package:cift_teker_front/screens/event_create_page.dart';
 import 'package:cift_teker_front/screens/profil_page.dart';
 import 'package:cift_teker_front/screens/home_page.dart';
+import 'package:cift_teker_front/screens/ride_page.dart';
+import 'package:cift_teker_front/screens/shared_route_page.dart';
 import 'package:flutter/material.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    HomePage(),                       // 0
-    ProfilePage(),                     // 1
-    EventCreatePage(),                 // 2
+    HomePage(), // 0
+    EventCreatePage(), // 1
+    RidePage(), //2
+    SharedRoutePage(), //3
+    ProfilePage(), //4
   ];
 
-  void _onItemTapped(int index) {
+  void onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -27,22 +31,19 @@ class _MainNavigationState extends State<MainNavigation> {
 
   BottomNavigationBar _bottomNav() {
     return BottomNavigationBar(
-      currentIndex: _selectedIndex,
+      currentIndex: _selectedIndex == 4 ? 0 : _selectedIndex,
       selectedItemColor: Colors.orange,
       unselectedItemColor: Colors.grey,
-      onTap: _onItemTapped,
+      onTap: (index) {
+        onItemTapped(index);
+      },
       items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Ana Sayfa"),
+        BottomNavigationBarItem(icon: Icon(Icons.add), label: "Ekle"),
+        BottomNavigationBarItem(icon: Icon(Icons.map), label: "Harita"),
         BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: "Home",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.group),
-          label: "Profil",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.add),
-          label: "Ekle",
+          icon: Icon(Icons.camera_alt),
+          label: "Sosyal Medya",
         ),
       ],
     );
@@ -52,7 +53,9 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: _bottomNav(), // ← her sayfada bar var
+      bottomNavigationBar: _selectedIndex < 4
+          ? _bottomNav()
+          : null, //sadece home, ekleme, paylaşılan, harita sayfası
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
 import 'package:cift_teker_front/models/requests/groupEvent_request.dart';
 import 'package:cift_teker_front/services/groupEvent_service.dart';
+import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -42,20 +43,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.3,
-        centerTitle: true,
-        title: const Text(
-          "Etkinlik Oluştur",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.black87,
-          ),
-        ),
-      ),
-
+      appBar: const CustomAppBar(title: "Etkinlik Oluştur"),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
 
@@ -99,7 +87,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   TextField(
                     controller: titleController,
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.event, color: Colors.orangeAccent),
+                      prefixIcon: const Icon(
+                        Icons.event,
+                        color: Colors.orangeAccent,
+                      ),
                       labelText: "Etkinlik Başlığı",
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -116,7 +107,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                     controller: descriptionController,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.description, color: Colors.orangeAccent),
+                      prefixIcon: const Icon(
+                        Icons.description,
+                        color: Colors.orangeAccent,
+                      ),
                       labelText: "Etkinlik Açıklaması",
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -129,8 +123,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   const SizedBox(height: 20),
 
                   // ------------ Tarih ve Kapasite
-                  const Text("Etkinlik Tarihi",
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    "Etkinlik Tarihi",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
 
                   Row(
@@ -140,14 +136,19 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           onTap: pickDate,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 16),
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_today, color: Colors.orangeAccent),
+                                const Icon(
+                                  Icons.calendar_today,
+                                  color: Colors.orangeAccent,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -172,10 +173,14 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           controller: capacityController,
                           keyboardType: TextInputType.number,
                           inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly, // sadece rakam
+                            FilteringTextInputFormatter
+                                .digitsOnly, // sadece rakam
                           ],
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.people, color: Colors.orangeAccent),
+                            prefixIcon: const Icon(
+                              Icons.people,
+                              color: Colors.orangeAccent,
+                            ),
                             labelText: "Katılımcı Sayısı",
                             filled: true,
                             fillColor: Colors.grey.shade50,
@@ -191,8 +196,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   const SizedBox(height: 20),
 
                   // ------------ Saatler
-                  const Text("Başlangıç - Bitiş Saati",
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    "Başlangıç - Bitiş Saati",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
 
                   Row(
@@ -203,10 +210,13 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            TimeInputFormatter()
+                            TimeInputFormatter(),
                           ],
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.access_time, color: Colors.orangeAccent),
+                            prefixIcon: const Icon(
+                              Icons.access_time,
+                              color: Colors.orangeAccent,
+                            ),
                             labelText: "Başlangıç (HH:MM)",
                             filled: true,
                             fillColor: Colors.grey.shade50,
@@ -223,10 +233,13 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            TimeInputFormatter()
+                            TimeInputFormatter(),
                           ],
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.access_time, color: Colors.orangeAccent),
+                            prefixIcon: const Icon(
+                              Icons.access_time,
+                              color: Colors.orangeAccent,
+                            ),
                             labelText: "Bitiş (HH:MM)",
                             filled: true,
                             fillColor: Colors.grey.shade50,
@@ -240,66 +253,75 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   ),
 
                   const SizedBox(height: 30),
-                  const Text("Etkinlik Konumları",
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    "Etkinlik Konumları",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
 
-                // Şehir
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: cityController,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r"[a-zA-ZığüşöçİĞÜŞÖÇ\s]")
-                          ),
-                        ],
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.location_city, color: Colors.orangeAccent),
-                          labelText: "Şehr",
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: startLocationController,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.location_on_outlined,
-                              color: Colors.orangeAccent),
-                          labelText: "Başlangıç Konumu",
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  // Şehir
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: cityController,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r"[a-zA-ZığüşöçİĞÜŞÖÇ\s]"),
+                            ),
+                          ],
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.location_city,
+                              color: Colors.orangeAccent,
+                            ),
+                            labelText: "Şehr",
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: endLocationController,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.flag_outlined,
-                              color: Colors.orangeAccent),
-                          labelText: "Bitiş Konumu",
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: startLocationController,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.location_on_outlined,
+                              color: Colors.orangeAccent,
+                            ),
+                            labelText: "Başlangıç Konumu",
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: endLocationController,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.flag_outlined,
+                              color: Colors.orangeAccent,
+                            ),
+                            labelText: "Bitiş Konumu",
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 30),
 
@@ -319,11 +341,15 @@ class _EventCreatePageState extends State<EventCreatePage> {
                             startTimeController.text.isEmpty ||
                             endTimeController.text.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Lütfen tüm alanları doldurun.")),
+                            const SnackBar(
+                              content: Text("Lütfen tüm alanları doldurun."),
+                            ),
                           );
                           print('title: ${titleController.text}');
                           print('description: ${descriptionController.text}');
-                          print('startLocation: ${startLocationController.text}');
+                          print(
+                            'startLocation: ${startLocationController.text}',
+                          );
                           print('endLocation: ${endLocationController.text}');
                           print('selectedDate: ${selectedDate}');
                           print('startTime: ${startTimeController.text}');
@@ -334,10 +360,16 @@ class _EventCreatePageState extends State<EventCreatePage> {
                         }
 
                         // Katılımcı sayısı
-                        final maxP = int.tryParse(capacityController.text.trim());
+                        final maxP = int.tryParse(
+                          capacityController.text.trim(),
+                        );
                         if (maxP == null || maxP <= 0 || maxP > 50) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Katılımcı sayısı 1-50 arasında olmalıdır.")),
+                            const SnackBar(
+                              content: Text(
+                                "Katılımcı sayısı 1-50 arasında olmalıdır.",
+                              ),
+                            ),
                           );
                           return;
                         }
@@ -378,11 +410,16 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           final storage = const FlutterSecureStorage();
                           final token = await storage.read(key: "auth_token");
 
-                          final response = await EventService().createGroupEvent(request, token!);
+                          final response = await EventService()
+                              .createGroupEvent(request, token!);
 
                           if (response == true) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Etkinlik başarıyla oluşturuldu!")),
+                              const SnackBar(
+                                content: Text(
+                                  "Etkinlik başarıyla oluşturuldu!",
+                                ),
+                              ),
                             );
                             // Navigator.push(
                             //   context,
@@ -394,9 +431,9 @@ class _EventCreatePageState extends State<EventCreatePage> {
                             );
                           }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Hata: $e")),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text("Hata: $e")));
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -412,7 +449,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                         style: TextStyle(fontSize: 17),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

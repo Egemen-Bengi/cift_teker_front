@@ -19,7 +19,7 @@ class TimeInputFormatter extends TextInputFormatter {
 
     String formatted = "";
 
-    if (text.length >= 1) {
+    if (text.isNotEmpty) {
       formatted += text.substring(0, 1);
     }
     if (text.length >= 2) {
