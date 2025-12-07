@@ -52,7 +52,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onTap: () {
                   final mainNavState = context
                       .findAncestorStateOfType<MainNavigationState>();
-                  mainNavState?.onItemTapped(3);
+                  mainNavState?.onItemTapped(4);
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(right: 12),
