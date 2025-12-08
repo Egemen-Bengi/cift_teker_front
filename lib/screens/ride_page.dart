@@ -145,6 +145,12 @@ class _RidePageState extends State<RidePage> {
   Future<void> _stopRide() async {
     _timer?.cancel();
 
+    await _getToken();
+    if (token == null || token!.isEmpty) {
+      _show("Token bulunamadı. Sürüş kaydedilemedi.");
+      return;
+    }
+
     if (ridePoints.isEmpty) {
       _show("Sürüş verisi bulunamadı.");
       return;
@@ -189,7 +195,20 @@ class _RidePageState extends State<RidePage> {
     }
   }
 
-  double calculateDistanceKm(List<LatLng> pts) => pts.length * 0.05;
+  double calculateDistanceKm(List<LatLng> pts) {
+    if (pts.length < 2) return 0.0;
+
+    double totalDistance = 0.0;
+    for (int i = 0; i < pts.length - 1; i++) {
+      totalDistance += Geolocator.distanceBetween(
+        pts[i].latitude,
+        pts[i].longitude,
+        pts[i + 1].latitude,
+        pts[i + 1].longitude,
+      );
+    }
+    return totalDistance / 1000.0;
+  }
 
   double calculateAverageSpeed(double km, int sec) =>
       sec == 0 ? 0 : km / (sec / 3600);
