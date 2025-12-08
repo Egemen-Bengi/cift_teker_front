@@ -1,8 +1,10 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
 import 'package:cift_teker_front/models/requests/updateUsername_request.dart';
 import 'package:cift_teker_front/models/responses/user_response.dart';
 import 'package:cift_teker_front/screens/auth_screen.dart';
 import 'package:cift_teker_front/screens/main_navigation.dart';
+import 'package:cift_teker_front/services/login_service.dart';
 import 'package:cift_teker_front/services/user_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
@@ -32,8 +34,8 @@ class _ProfilePageState extends State<ProfilePage> {
     mainNavState?.onItemTapped(0);
   }
 
-  void _showAlertDialog(String title, String message) {
-    showDialog(
+  Future<void> _showAlertDialog(String title, String message) {
+    return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -148,6 +150,123 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     ).then((_) {});
+  }
+
+  void _updatePassword() {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Şifre Değiştir"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: oldPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Eski Şifre",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Yeni Şifre",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            child: const Text("Değiştir"),
+            onPressed: () async {
+              final oldPass = oldPasswordController.text.trim();
+              final newPass = newPasswordController.text.trim();
+
+              if (oldPass.isEmpty || newPass.isEmpty) {
+                Navigator.pop(dialogContext);
+                _showAlertDialog("Hata", "Alanlar boş bırakılamaz.");
+                return;
+              }
+
+              Navigator.pop(dialogContext);
+
+              BuildContext? loadingDialogContext;
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  loadingDialogContext = ctx;
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
+
+              final token = await _storage.read(key: "auth_token");
+
+              if (token == null) {
+                if (loadingDialogContext != null &&
+                    loadingDialogContext!.mounted) {
+                  Navigator.pop(loadingDialogContext!);
+                }
+                _showAlertDialog("Hata", "Token bulunamadı.");
+                return;
+              }
+
+              try {
+                final loginService = LoginService();
+
+                await loginService.updatePassword(
+                  UpdatePasswordRequest(
+                    oldPassword: oldPass,
+                    newPassword: newPass,
+                  ),
+                  token,
+                );
+
+                await _storage.delete(key: "auth_token");
+
+                if (loadingDialogContext != null &&
+                    loadingDialogContext!.mounted) {
+                  Navigator.pop(loadingDialogContext!);
+                }
+
+                await _showAlertDialog(
+                  "Başarılı",
+                  "Şifre değiştirildi. Yeniden giriş yapmanız gerekiyor.",
+                );
+
+                if (!mounted) return;
+
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AuthPage()),
+                  (Route<dynamic> route) => false,
+                );
+              } catch (e) {
+                if (loadingDialogContext != null &&
+                    loadingDialogContext!.mounted) {
+                  Navigator.pop(loadingDialogContext!);
+                }
+
+                if (mounted) {
+                  _showAlertDialog("Hata", "İşlem başarısız: ${e.toString()}");
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _logout() async {
@@ -304,6 +423,27 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: const Text(
                       "Kullanıcı Adını Güncelle",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _updatePassword,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Şifreyi Değiştir",
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
