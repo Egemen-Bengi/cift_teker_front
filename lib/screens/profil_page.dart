@@ -63,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (alertContext) => AlertDialog(
         title: const Text("Kullanıcı Adını Güncelle"),
         content: TextField(
           controller: usernameController,
@@ -75,40 +75,35 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           TextButton(
             onPressed: () {
-              usernameController.dispose();
-              Navigator.pop(context);
+              Navigator.pop(alertContext);
             },
             child: const Text("İptal"),
           ),
           ElevatedButton(
             onPressed: () async {
               final newUsername = usernameController.text.trim();
-
               if (newUsername.isEmpty) {
-                usernameController.dispose();
-                Navigator.pop(context);
-                if (!mounted) return;
+                Navigator.pop(alertContext);
                 _showAlertDialog("Hata", "Kullanıcı adı boş olamaz.");
                 return;
               }
 
-              // Loading dialog göster
-              if (!mounted) return;
+              BuildContext? loadingContext;
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
+                builder: (ctx) {
+                  loadingContext = ctx;
+                  return const Center(child: CircularProgressIndicator());
+                },
               );
 
               final token = await _storage.read(key: "auth_token");
 
-              if (!mounted) return;
-              Navigator.pop(context); // Loading dialog kapat
-
               if (token == null || token.isEmpty) {
-                usernameController.dispose();
-                if (!mounted) return;
-                _showAlertDialog("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+                if (loadingContext != null) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog("Hata", "Oturum bulunamadı.");
                 return;
               }
 
@@ -118,45 +113,41 @@ class _ProfilePageState extends State<ProfilePage> {
                   token,
                 );
 
-                usernameController.dispose();
+                if (loadingContext != null) Navigator.pop(loadingContext!);
 
-                if (!mounted) return;
-                Navigator.pop(context); // Update dialog'u kapat
-
-                // Başarılıysa state'i güncelle ve sayfayı yenile
-                if (updateResponse.message.toLowerCase().contains("success") || 
+                String title, message;
+                if (updateResponse.message.toLowerCase().contains("success") ||
                     updateResponse.httpStatus == "200") {
                   setState(() {
                     _futureUser = _loadUser();
                   });
-                  
-                  _showAlertDialog("Başarılı", "Kullanıcı adınız güncellendi.");
+                  title = "Başarılı";
+                  message = "Kullanıcı adınız güncellendi.";
                 } else {
-                  _showAlertDialog("Hata", "Kullanıcı adı güncellenemedi: ${updateResponse.message}");
+                  title = "Hata";
+                  message =
+                      "Kullanıcı adı güncellenemedi: ${updateResponse.message}";
                 }
+
+                Navigator.pop(alertContext);
+
+                await Future.delayed(const Duration(milliseconds: 100));
+
+                _showAlertDialog(title, message);
               } catch (e) {
-                usernameController.dispose();
-
-                if (!mounted) return;
-                
-                // Dialog açıksa kapat
-                try {
-                  Navigator.pop(context);
-                } catch (_) {}
-
-                _showAlertDialog("Hata", "Kullanıcı adı güncellenirken hata oluştu: ${e.toString()}");
+                if (loadingContext != null) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog(
+                  "Hata",
+                  "Güncelleme sırasında hata: ${e.toString()}",
+                );
               }
             },
             child: const Text("Güncelle"),
           ),
         ],
       ),
-    ).then((_) {
-      // Dialog kapandığında controller'ı dispose et
-      try {
-        usernameController.dispose();
-      } catch (_) {}
-    });
+    ).then((_) {});
   }
 
   Future<void> _logout() async {
