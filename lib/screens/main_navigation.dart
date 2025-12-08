@@ -42,7 +42,7 @@ class MainNavigationState extends State<MainNavigation> {
         BottomNavigationBarItem(icon: Icon(Icons.add), label: "Ekle"),
         BottomNavigationBarItem(icon: Icon(Icons.map), label: "Harita"),
         BottomNavigationBarItem(
-          icon: Icon(Icons.camera_alt),
+          icon: Icon(Icons.people_alt),
           label: "Sosyal Medya",
         ),
       ],

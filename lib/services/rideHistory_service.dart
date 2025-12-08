@@ -5,7 +5,8 @@ import '../models/responses/rideHistory_response.dart';
 class RideHistoryService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ride-history",
+      baseUrl:
+          "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ride-history",
       connectTimeout: Duration(seconds: 5),
       receiveTimeout: Duration(seconds: 5),
     ),
@@ -58,6 +59,21 @@ class RideHistoryService {
       );
 
       return response.data["message"];
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  //bireysel sürüş başlatma
+  Future<int> startRide(String token) async {
+    try {
+      final response = await _dio.post(
+        "/start",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      // Backend ResponseMessage<Long> döndüğü için object alanını alıyoruz
+      return response.data["object"] as int;
     } on DioException catch (e) {
       throw _handleError(e);
     }
