@@ -54,7 +54,10 @@ class _HomePageState extends State<HomePage> {
             return const Center(child: Text("Hiç etkinlik bulunamadı"));
           }
 
-          final events = snapshot.data!.data;
+          final now = DateTime.now();
+          final events = List<GroupEventResponse>.from(snapshot.data!.data)
+            ..removeWhere((event) => event.startDateTime.isBefore(now))
+            ..sort((a, b) => b.startDateTime.compareTo(a.startDateTime) * -1);
 
           return ListView.builder(
             itemCount: events.length,
