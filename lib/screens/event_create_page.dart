@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/cities/turkish_cities.dart';
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
 import 'package:cift_teker_front/models/requests/groupEvent_request.dart';
 import 'package:cift_teker_front/services/groupEvent_service.dart';
@@ -22,26 +23,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
   final TextEditingController startTimeController = TextEditingController();
   final TextEditingController endTimeController = TextEditingController();
   final TextEditingController capacityController = TextEditingController();
+  final List<String> _turkishCities = TurkishCities.list;
 
   DateTime? selectedDate;
   String? selectedCity;
-
-  final List<String> turkishCities = [
-    'ADANA', 'ADIYAMAN', 'AFYONKARAHİSAR', 'AĞRI', 'AKSARAY', 'AMASYA',
-    'ANKARA', 'ANTALYA', 'ARDAHAN', 'ARTVİN', 'AYDIN', 'BALIKESİR',
-    'BARTIN', 'BATMAN', 'BAYBURT', 'BİLECİK', 'BİNGÖL', 'BİTLİS',
-    'BOLU', 'BURDUR', 'BURSA', 'ÇANAKKALE', 'ÇANKIRI', 'ÇORUM',
-    'DENİZLİ', 'DİYARBAKIR', 'DÜZCE', 'EDİRNE', 'ELAZIĞ', 'ERZİNCAN',
-    'ERZURUM', 'ESKİŞEHİR', 'GAZİANTEP', 'GİRESUN', 'GÜMÜŞHANE', 'HAKKARİ',
-    'HATAY', 'IĞDIR', 'ISPARTA', 'İSTANBUL', 'İZMİR', 'KAHRAMANMARAŞ',
-    'KARABÜK', 'KARAMAN', 'KARS', 'KASTAMONU', 'KAYSERİ', 'KIRIKKALE',
-    'KIRKLARELİ', 'KIRŞEHİR', 'KİLİS', 'KOCAELİ', 'KONYA', 'KÜTAHYA',
-    'MALATYA', 'MANİSA', 'MARDİN', 'MERSİN', 'MUĞLA', 'MUŞ',
-    'NEVŞEHİR', 'NİĞDE', 'ORDU', 'OSMANİYE', 'RİZE', 'SAKARYA',
-    'SAMSUN', 'SİİRT', 'SİNOP', 'SİVAS', 'ŞANLIURFA', 'ŞIRNAK',
-    'TEKİRDAĞ', 'TOKAT', 'TRABZON', 'TUNCELİ', 'UŞAK', 'VAN',
-    'YALOVA', 'YOZGAT', 'ZONGULDAK'
-  ];
 
   Future<void> pickDate() async {
     final today = DateTime.now();
@@ -173,8 +158,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                                   child: Text(
                                     selectedDate == null
                                         ? "Tarih seç"
-                                        : DateFormat('dd MMM yyyy', 'tr')
-                                            .format(selectedDate!),
+                                        : DateFormat(
+                                            'dd MMM yyyy',
+                                            'tr',
+                                          ).format(selectedDate!),
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
@@ -281,7 +268,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
 
                   // Şehir
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
@@ -303,7 +293,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                         ],
                       ),
                       value: selectedCity,
-                      items: turkishCities.map((String city) {
+                      items: _turkishCities.map((String city) {
                         return DropdownMenuItem<String>(
                           value: city,
                           child: Text(city),

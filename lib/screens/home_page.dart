@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/cities/turkish_cities.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -17,6 +18,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   final EventService _eventService = EventService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final List<String> _turkishCities = TurkishCities.list;
 
   late TabController _tabController;
   late Future<ApiResponse<List<GroupEventResponse>>> _futureAllEvents;
@@ -24,89 +26,6 @@ class _HomePageState extends State<HomePage>
 
   bool _dataLoaded = false;
 
-  final List<String> turkishCities = [
-    'ADANA',
-    'ADIYAMAN',
-    'AFYONKARAHİSAR',
-    'AĞRI',
-    'AKSARAY',
-    'AMASYA',
-    'ANKARA',
-    'ANTALYA',
-    'ARDAHAN',
-    'ARTVİN',
-    'AYDIN',
-    'BALIKESİR',
-    'BARTIN',
-    'BATMAN',
-    'BAYBURT',
-    'BİLECİK',
-    'BİNGÖL',
-    'BİTLİS',
-    'BOLU',
-    'BURDUR',
-    'BURSA',
-    'ÇANAKKALE',
-    'ÇANKIRI',
-    'ÇORUM',
-    'DENİZLİ',
-    'DİYARBAKIR',
-    'DÜZCE',
-    'EDİRNE',
-    'ELAZIĞ',
-    'ERZİNCAN',
-    'ERZURUM',
-    'ESKİŞEHİR',
-    'GAZİANTEP',
-    'GİRESUN',
-    'GÜMÜŞHANE',
-    'HAKKARİ',
-    'HATAY',
-    'IĞDIR',
-    'ISPARTA',
-    'İSTANBUL',
-    'İZMİR',
-    'KAHRAMANMARAŞ',
-    'KARABÜK',
-    'KARAMAN',
-    'KARS',
-    'KASTAMONU',
-    'KAYSERİ',
-    'KIRIKKALE',
-    'KIRKLARELİ',
-    'KIRŞEHİR',
-    'KİLİS',
-    'KOCAELİ',
-    'KONYA',
-    'KÜTAHYA',
-    'MALATYA',
-    'MANİSA',
-    'MARDİN',
-    'MERSİN',
-    'MUĞLA',
-    'MUŞ',
-    'NEVŞEHİR',
-    'NİĞDE',
-    'ORDU',
-    'OSMANİYE',
-    'RİZE',
-    'SAKARYA',
-    'SAMSUN',
-    'SİİRT',
-    'SİNOP',
-    'SİVAS',
-    'ŞANLIURFA',
-    'ŞIRNAK',
-    'TEKİRDAĞ',
-    'TOKAT',
-    'TRABZON',
-    'TUNCELİ',
-    'UŞAK',
-    'VAN',
-    'YALOVA',
-    'YOZGAT',
-    'ZONGULDAK',
-  ];
   String? _selectedCityAll;
   String? _selectedCityMy;
 
@@ -210,7 +129,7 @@ class _HomePageState extends State<HomePage>
                     color: Colors.indigo,
                   ),
                   menuMaxHeight: 250,
-                  items: turkishCities.map((city) {
+                  items: _turkishCities.map((city) {
                     return DropdownMenuItem(
                       value: city,
                       child: Text(
