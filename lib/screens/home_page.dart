@@ -24,6 +24,92 @@ class _HomePageState extends State<HomePage>
 
   bool _dataLoaded = false;
 
+  final List<String> turkishCities = [
+    'ADANA',
+    'ADIYAMAN',
+    'AFYONKARAHİSAR',
+    'AĞRI',
+    'AKSARAY',
+    'AMASYA',
+    'ANKARA',
+    'ANTALYA',
+    'ARDAHAN',
+    'ARTVİN',
+    'AYDIN',
+    'BALIKESİR',
+    'BARTIN',
+    'BATMAN',
+    'BAYBURT',
+    'BİLECİK',
+    'BİNGÖL',
+    'BİTLİS',
+    'BOLU',
+    'BURDUR',
+    'BURSA',
+    'ÇANAKKALE',
+    'ÇANKIRI',
+    'ÇORUM',
+    'DENİZLİ',
+    'DİYARBAKIR',
+    'DÜZCE',
+    'EDİRNE',
+    'ELAZIĞ',
+    'ERZİNCAN',
+    'ERZURUM',
+    'ESKİŞEHİR',
+    'GAZİANTEP',
+    'GİRESUN',
+    'GÜMÜŞHANE',
+    'HAKKARİ',
+    'HATAY',
+    'IĞDIR',
+    'ISPARTA',
+    'İSTANBUL',
+    'İZMİR',
+    'KAHRAMANMARAŞ',
+    'KARABÜK',
+    'KARAMAN',
+    'KARS',
+    'KASTAMONU',
+    'KAYSERİ',
+    'KIRIKKALE',
+    'KIRKLARELİ',
+    'KIRŞEHİR',
+    'KİLİS',
+    'KOCAELİ',
+    'KONYA',
+    'KÜTAHYA',
+    'MALATYA',
+    'MANİSA',
+    'MARDİN',
+    'MERSİN',
+    'MUĞLA',
+    'MUŞ',
+    'NEVŞEHİR',
+    'NİĞDE',
+    'ORDU',
+    'OSMANİYE',
+    'RİZE',
+    'SAKARYA',
+    'SAMSUN',
+    'SİİRT',
+    'SİNOP',
+    'SİVAS',
+    'ŞANLIURFA',
+    'ŞIRNAK',
+    'TEKİRDAĞ',
+    'TOKAT',
+    'TRABZON',
+    'TUNCELİ',
+    'UŞAK',
+    'VAN',
+    'YALOVA',
+    'YOZGAT',
+    'ZONGULDAK',
+  ];
+  String? _selectedCityAll;
+  String? _selectedCityMy;
+
   @override
   void initState() {
     super.initState();
@@ -79,7 +165,102 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  Widget _buildEventList(Future<ApiResponse<List<GroupEventResponse>>> future) {
+  Widget _buildCityFilter({required bool isAllTab}) {
+    final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+    void updateCity(String? value) {
+      setState(() {
+        if (isAllTab) {
+          _selectedCityAll = value;
+        } else {
+          _selectedCityMy = value;
+        }
+      });
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedCity,
+                  hint: Text(
+                    "Şehir Seçiniz (Tümü)",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                  ),
+                  icon: const Icon(
+                    Icons.location_on_outlined,
+                    color: Colors.indigo,
+                  ),
+                  menuMaxHeight: 250,
+                  items: turkishCities.map((city) {
+                    return DropdownMenuItem(
+                      value: city,
+                      child: Text(
+                        city,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: city == selectedCity
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: city == selectedCity
+                              ? Theme.of(context).primaryColor
+                              : Colors.black87,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: updateCity,
+                ),
+              ),
+            ),
+          ),
+          if (selectedCity != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: InkWell(
+                onTap: () => updateCity(null),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.filter_alt_off,
+                    color: Colors.indigo,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventList(
+    Future<ApiResponse<List<GroupEventResponse>>> future, {
+    required bool isAllTab,
+  }) {
     return FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
       future: future,
       builder: (context, snapshot) {
@@ -99,6 +280,17 @@ class _HomePageState extends State<HomePage>
         final events = List<GroupEventResponse>.from(snapshot.data!.data)
           ..removeWhere((event) => event.startDateTime.isBefore(now))
           ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+        final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+        if (selectedCity != null) {
+          events.removeWhere(
+            (event) => event.city?.toUpperCase().trim() != selectedCity.trim(),
+          );
+        }
+
+        if (events.isEmpty) {
+          return const Center(child: Text("Bu kriterlerde etkinlik yok"));
+        }
 
         return ListView.builder(
           itemCount: events.length,
@@ -136,8 +328,22 @@ class _HomePageState extends State<HomePage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildEventList(_futureAllEvents),
-          _buildEventList(_futureMyEvents),
+          Column(
+            children: [
+              _buildCityFilter(isAllTab: true),
+              Expanded(
+                child: _buildEventList(_futureAllEvents, isAllTab: true),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              _buildCityFilter(isAllTab: false),
+              Expanded(
+                child: _buildEventList(_futureMyEvents, isAllTab: false),
+              ),
+            ],
+          ),
         ],
       ),
     );
