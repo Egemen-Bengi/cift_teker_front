@@ -1,5 +1,6 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'; // compute için
 import '../models/requests/sharedRoute_request.dart';
 import '../models/responses/sharedRoute_response.dart';
 
@@ -58,22 +59,30 @@ class SharedRouteService {
     }
   }
 
-  // Tüm rotaları listeleme
-  Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
-    String token,
-  ) async {
-    final response = await _dio.get(
-      "/all",
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
-
-    return ApiResponse.fromJson(
-      response.data,
-      (jsonList) => (jsonList as List)
-          .map((e) => SharedRouteResponse.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  // compute için top-level parse fonksiyonu 
+  static List<SharedRouteResponse> _parseSharedRoutes(dynamic list) {
+    if (list == null || list is! List) return <SharedRouteResponse>[];
+    return list
+        .map((e) => SharedRouteResponse.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
+
+  // Tüm rotaları listeleme
+ Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
+  String token,
+) async {
+  final response = await _dio.get(
+    "/all",
+    options: Options(headers: {"Authorization": "Bearer $token"}),
+  );
+
+  return ApiResponse.fromJson(
+    response.data,
+    (object) => (object as List)
+        .map((e) => SharedRouteResponse.fromJson(e))
+        .toList(),
+  );
+}
 
   // Hata yönetimi
   Exception _handleError(DioException e) {

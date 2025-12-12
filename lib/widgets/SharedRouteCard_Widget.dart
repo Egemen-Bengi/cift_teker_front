@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/responses/sharedRoute_response.dart';
 
 class SharedRouteCard extends StatelessWidget {
@@ -18,20 +19,15 @@ class SharedRouteCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.person, size: 20, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Text(
-                      sharedRoute.username,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+                const Icon(Icons.person, size: 20, color: Colors.grey),
+                const SizedBox(width: 6),
+                Text(
+                  sharedRoute.username,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -55,11 +51,28 @@ class SharedRouteCard extends StatelessWidget {
 
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child:
-                  sharedRoute.imageUrl != null &&
+              child: sharedRoute.imageUrl != null &&
                       sharedRoute.imageUrl!.isNotEmpty
-                  ? Image.network(sharedRoute.imageUrl!, fit: BoxFit.cover)
-                  : Image.asset("assets/ciftTeker.png", fit: BoxFit.cover),
+                  ? CachedNetworkImage(
+                      imageUrl: sharedRoute.imageUrl!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const SizedBox(
+                        height: 200,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, url, error) => Image.asset(
+                        "assets/ciftTeker.png",
+                        height: 200,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
+                      "assets/ciftTeker.png",
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
             ),
 
             const SizedBox(height: 10),
@@ -68,8 +81,6 @@ class SharedRouteCard extends StatelessWidget {
               "Paylaşım: ${sharedRoute.createdAt.toLocal()}",
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
-
-            const SizedBox(height: 10),
 
             Row(
               children: [
