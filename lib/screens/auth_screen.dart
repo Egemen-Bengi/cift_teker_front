@@ -24,8 +24,6 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-
   final TextEditingController _usernameController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
@@ -91,13 +89,7 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       final userService = UserService();
-      print("USERNAME: ${_usernameController.text.trim()}");
-      print("EMAIL: ${_emailController.text.trim()}");
-      print("PASSWORD: ${_passwordController.text.trim()}");
-      print("NAME: ${_firstNameController.text.trim()}");
-      print("SURNAME: ${_lastNameController.text.trim()}");
-      print("PHONE: ${_phoneController.text.trim()}");
-      print("GENDER: ${_genderText()}");
+      final rawPhone = phoneMaskFormatter.getUnmaskedText();
 
       final request = UserRequest(
         username: _usernameController.text.trim(),
@@ -105,7 +97,7 @@ class _AuthPageState extends State<AuthPage> {
         password: _passwordController.text.trim(),
         name: _firstNameController.text.trim(),
         surname: _lastNameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
+        phoneNumber: rawPhone,
         gender: _genderText(),
       );
 
@@ -573,7 +565,6 @@ class _AuthPageState extends State<AuthPage> {
                         _emailCriteria(),
                         const SizedBox(height: 16),
                         TextFormField(
-                          controller: _phoneController,
                           decoration: const InputDecoration(
                             labelText: 'Telefon Numarası',
                             border: OutlineInputBorder(),
