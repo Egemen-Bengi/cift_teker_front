@@ -11,10 +11,10 @@ class ApiResponse<T> {
 
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
-    T Function(dynamic) fromJsonT,
+    T Function(dynamic object) fromJsonT,
   ) {
-    return ApiResponse(
-      message: json['message'] ?? "",
+    return ApiResponse<T>(
+      message: json['message'],
       httpStatus: json['httpStatus'],
       data: fromJsonT(json['object']),
     );
