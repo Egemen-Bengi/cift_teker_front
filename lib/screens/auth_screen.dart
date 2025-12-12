@@ -8,6 +8,7 @@ import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -51,6 +52,11 @@ class _AuthPageState extends State<AuthPage> {
     return passwordRegex.hasMatch(password);
   }
 
+  final phoneMaskFormatter = MaskTextInputFormatter(
+    mask: '+90 (###) ### ## ##',
+    filter: { "#": RegExp(r'[0-9]') },
+  );
+
   void _showAlertDialog(String title, String message) {
     showDialog(
       context: context,
@@ -85,6 +91,13 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       final userService = UserService();
+      print("USERNAME: ${_usernameController.text.trim()}");
+      print("EMAIL: ${_emailController.text.trim()}");
+      print("PASSWORD: ${_passwordController.text.trim()}");
+      print("NAME: ${_firstNameController.text.trim()}");
+      print("SURNAME: ${_lastNameController.text.trim()}");
+      print("PHONE: ${_phoneController.text.trim()}");
+      print("GENDER: ${_genderText()}");
 
       final request = UserRequest(
         username: _usernameController.text.trim(),
@@ -566,10 +579,12 @@ class _AuthPageState extends State<AuthPage> {
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.phone,
+                          inputFormatters: [phoneMaskFormatter],
                           validator: (value) {
                             if (!isSignIn) {
-                              if (value == null || value.trim().isEmpty)
+                              if (value == null || value.trim().isEmpty) {
                                 return 'Telefon numarası gerekli';
+                              }
                             }
                             return null;
                           },

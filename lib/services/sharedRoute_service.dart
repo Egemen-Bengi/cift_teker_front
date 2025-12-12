@@ -1,6 +1,5 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart'; // compute için
 import '../models/requests/sharedRoute_request.dart';
 import '../models/responses/sharedRoute_response.dart';
 
@@ -57,14 +56,6 @@ class SharedRouteService {
     } on DioException catch (e) {
       throw _handleError(e);
     }
-  }
-
-  // compute için top-level parse fonksiyonu 
-  static List<SharedRouteResponse> _parseSharedRoutes(dynamic list) {
-    if (list == null || list is! List) return <SharedRouteResponse>[];
-    return list
-        .map((e) => SharedRouteResponse.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 
   // Tüm rotaları listeleme
