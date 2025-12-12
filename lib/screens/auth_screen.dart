@@ -8,6 +8,7 @@ import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -23,8 +24,6 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-
   final TextEditingController _usernameController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
@@ -50,6 +49,11 @@ class _AuthPageState extends State<AuthPage> {
     final passwordRegex = RegExp(r'^.{5,}$');
     return passwordRegex.hasMatch(password);
   }
+
+  final phoneMaskFormatter = MaskTextInputFormatter(
+    mask: '+90 (###) ### ## ##',
+    filter: { "#": RegExp(r'[0-9]') },
+  );
 
   void _showAlertDialog(String title, String message) {
     showDialog(
@@ -85,6 +89,7 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       final userService = UserService();
+      final rawPhone = phoneMaskFormatter.getUnmaskedText();
 
       final request = UserRequest(
         username: _usernameController.text.trim(),
@@ -92,7 +97,7 @@ class _AuthPageState extends State<AuthPage> {
         password: _passwordController.text.trim(),
         name: _firstNameController.text.trim(),
         surname: _lastNameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
+        phoneNumber: rawPhone,
         gender: _genderText(),
       );
 
@@ -560,16 +565,17 @@ class _AuthPageState extends State<AuthPage> {
                         _emailCriteria(),
                         const SizedBox(height: 16),
                         TextFormField(
-                          controller: _phoneController,
                           decoration: const InputDecoration(
                             labelText: 'Telefon Numarası',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.phone,
+                          inputFormatters: [phoneMaskFormatter],
                           validator: (value) {
                             if (!isSignIn) {
-                              if (value == null || value.trim().isEmpty)
+                              if (value == null || value.trim().isEmpty) {
                                 return 'Telefon numarası gerekli';
+                              }
                             }
                             return null;
                           },
