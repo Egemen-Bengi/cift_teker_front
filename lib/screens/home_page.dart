@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/cities/turkish_cities.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,56 +14,256 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final EventService _eventService = EventService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final List<String> _turkishCities = TurkishCities.list;
 
-  late Future<ApiResponse<List<GroupEventResponse>>> _futureEvents;
+  late TabController _tabController;
+  late Future<ApiResponse<List<GroupEventResponse>>> _futureAllEvents;
+  late Future<ApiResponse<List<GroupEventResponse>>> _futureMyEvents;
+
+  bool _dataLoaded = false;
+
+  String? _selectedCityAll;
+  String? _selectedCityMy;
 
   @override
   void initState() {
     super.initState();
-    _futureEvents = _loadEvents();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadEvents();
   }
 
-  Future<ApiResponse<List<GroupEventResponse>>> _loadEvents() async {
+  Future<void> _loadEvents() async {
     final token = await _storage.read(key: "auth_token");
 
     if (token == null || token.isEmpty) {
-      return Future.error("Kullanıcı doğrulaması başarısız.");
+      setState(() {
+        _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _dataLoaded = true;
+      });
+      return;
     }
 
-    return _eventService.getAllGroupEvents(token);
+    try {
+      final allEventsResponse = await _eventService.getAllGroupEvents(token);
+      final myEventsResponse = await _eventService.getMyGroupEvents(token);
+
+      final myEventIds = myEventsResponse.data
+          .map((e) => e.groupEventId)
+          .toSet();
+
+      final filteredAllEvents = allEventsResponse.data
+          .where((e) => !myEventIds.contains(e.groupEventId))
+          .toList();
+
+      setState(() {
+        _futureAllEvents = Future.value(
+          ApiResponse(
+            data: filteredAllEvents,
+            message: "Tüm etkinlikler yüklendi",
+          ),
+        );
+        _futureMyEvents = Future.value(
+          ApiResponse(
+            data: myEventsResponse.data,
+            message: "Benim etkinliklerim yüklendi",
+          ),
+        );
+        _dataLoaded = true;
+      });
+    } catch (e) {
+      setState(() {
+        _futureAllEvents = Future.error("Hata oluştu: $e");
+        _futureMyEvents = Future.error("Hata oluştu: $e");
+        _dataLoaded = true;
+      });
+    }
+  }
+
+  Widget _buildCityFilter({required bool isAllTab}) {
+    final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+    void updateCity(String? value) {
+      setState(() {
+        if (isAllTab) {
+          _selectedCityAll = value;
+        } else {
+          _selectedCityMy = value;
+        }
+      });
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedCity,
+                  hint: Text(
+                    "Şehir Seçiniz (Tümü)",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                  ),
+                  icon: const Icon(
+                    Icons.location_on_outlined,
+                    color: Colors.indigo,
+                  ),
+                  menuMaxHeight: 250,
+                  items: _turkishCities.map((city) {
+                    return DropdownMenuItem(
+                      value: city,
+                      child: Text(
+                        city,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: city == selectedCity
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: city == selectedCity
+                              ? Theme.of(context).primaryColor
+                              : Colors.black87,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: updateCity,
+                ),
+              ),
+            ),
+          ),
+          if (selectedCity != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: InkWell(
+                onTap: () => updateCity(null),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.filter_alt_off,
+                    color: Colors.indigo,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventList(
+    Future<ApiResponse<List<GroupEventResponse>>> future, {
+    required bool isAllTab,
+  }) {
+    return FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text("Hata oluştu: ${snapshot.error}"));
+        }
+
+        if (snapshot.data == null || snapshot.data!.data.isEmpty) {
+          return const Center(child: Text("Hiç etkinlik bulunamadı"));
+        }
+
+        final now = DateTime.now();
+        final events = List<GroupEventResponse>.from(snapshot.data!.data)
+          ..removeWhere((event) => event.startDateTime.isBefore(now))
+          ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+        final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+        if (selectedCity != null) {
+          events.removeWhere(
+            (event) => event.city?.toUpperCase().trim() != selectedCity.trim(),
+          );
+        }
+
+        if (events.isEmpty) {
+          return const Center(child: Text("Bu kriterlerde etkinlik yok"));
+        }
+
+        return ListView.builder(
+          itemCount: events.length,
+          itemBuilder: (context, index) {
+            return EventCard(event: events[index]);
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_dataLoaded) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
-      appBar: const CustomAppBar(title: "Çift Teker"),
-      body: FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
-        future: _futureEvents,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Hata oluştu: ${snapshot.error}"));
-          }
-
-          if (snapshot.data == null || snapshot.data!.data.isEmpty) {
-            return const Center(child: Text("Hiç etkinlik bulunamadı"));
-          }
-
-          final events = snapshot.data!.data;
-
-          return ListView.builder(
-            itemCount: events.length,
-            itemBuilder: (context, index) {
-              return EventCard(event: events[index]);
-            },
-          );
-        },
+      appBar: CustomAppBar(
+        title: "Çift Teker",
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: "Tüm Etkinlikler"),
+            Tab(text: "Benim Etkinliklerim"),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          Column(
+            children: [
+              _buildCityFilter(isAllTab: true),
+              Expanded(
+                child: _buildEventList(_futureAllEvents, isAllTab: true),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              _buildCityFilter(isAllTab: false),
+              Expanded(
+                child: _buildEventList(_futureMyEvents, isAllTab: false),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

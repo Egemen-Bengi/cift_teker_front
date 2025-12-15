@@ -59,21 +59,21 @@ class SharedRouteService {
   }
 
   // Tüm rotaları listeleme
-  Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
-    String token,
-  ) async {
-    final response = await _dio.get(
-      "/all",
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
+ Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
+  String token,
+) async {
+  final response = await _dio.get(
+    "/all",
+    options: Options(headers: {"Authorization": "Bearer $token"}),
+  );
 
-    return ApiResponse.fromJson(
-      response.data,
-      (jsonList) => (jsonList as List)
-          .map((e) => SharedRouteResponse.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-  }
+  return ApiResponse.fromJson(
+    response.data,
+    (object) => (object as List)
+        .map((e) => SharedRouteResponse.fromJson(e))
+        .toList(),
+  );
+}
 
   // Hata yönetimi
   Exception _handleError(DioException e) {

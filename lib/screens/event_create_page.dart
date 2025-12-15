@@ -1,8 +1,10 @@
+import 'package:cift_teker_front/cities/turkish_cities.dart';
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
 import 'package:cift_teker_front/models/requests/groupEvent_request.dart';
 import 'package:cift_teker_front/services/groupEvent_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -14,7 +16,6 @@ class EventCreatePage extends StatefulWidget {
 }
 
 class _EventCreatePageState extends State<EventCreatePage> {
-  final TextEditingController cityController = TextEditingController();
   final TextEditingController startLocationController = TextEditingController();
   final TextEditingController endLocationController = TextEditingController();
   final TextEditingController titleController = TextEditingController();
@@ -22,13 +23,16 @@ class _EventCreatePageState extends State<EventCreatePage> {
   final TextEditingController startTimeController = TextEditingController();
   final TextEditingController endTimeController = TextEditingController();
   final TextEditingController capacityController = TextEditingController();
+  final List<String> _turkishCities = TurkishCities.list;
 
   DateTime? selectedDate;
+  String? selectedCity;
 
   Future<void> pickDate() async {
     final today = DateTime.now();
     final date = await showDatePicker(
       context: context,
+      locale: const Locale('tr'),
       firstDate: today,
       lastDate: DateTime(2030),
       initialDate: today,
@@ -154,7 +158,10 @@ class _EventCreatePageState extends State<EventCreatePage> {
                                   child: Text(
                                     selectedDate == null
                                         ? "Tarih seç"
-                                        : "${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
+                                        : DateFormat(
+                                            'dd MMM yyyy',
+                                            'tr',
+                                          ).format(selectedDate!),
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
@@ -260,31 +267,49 @@ class _EventCreatePageState extends State<EventCreatePage> {
                   const SizedBox(height: 8),
 
                   // Şehir
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                      color: Colors.grey.shade50,
+                    ),
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                      menuMaxHeight: 300,
+                      hint: Row(
+                        children: [
+                          Icon(
+                            Icons.location_city,
+                            color: Colors.orangeAccent,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text("Şehir"),
+                        ],
+                      ),
+                      value: selectedCity,
+                      items: _turkishCities.map((String city) {
+                        return DropdownMenuItem<String>(
+                          value: city,
+                          child: Text(city),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() => selectedCity = newValue);
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Konumlar
                   Row(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: cityController,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r"[a-zA-ZığüşöçİĞÜŞÖÇ\s]"),
-                            ),
-                          ],
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(
-                              Icons.location_city,
-                              color: Colors.orangeAccent,
-                            ),
-                            labelText: "Şehr",
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
                           controller: startLocationController,
@@ -333,7 +358,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                         // Zorunlu alanları kontrol et
                         if (titleController.text.isEmpty ||
                             capacityController.text.isEmpty ||
-                            cityController.text.isEmpty ||
+                            selectedCity == null ||
                             descriptionController.text.isEmpty ||
                             startLocationController.text.isEmpty ||
                             endLocationController.text.isEmpty ||
@@ -355,7 +380,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           print('startTime: ${startTimeController.text}');
                           print('endTime: ${endTimeController.text}');
                           print('capacity: ${capacityController.text}');
-                          print('city: ${cityController.text}');
+                          print('city: ${selectedCity}');
                           return;
                         }
 
@@ -403,7 +428,7 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           startLocation: startLocationController.text,
                           endLocation: endLocationController.text,
                           maxParticipants: maxP,
-                          city: cityController.text,
+                          city: selectedCity!,
                         );
 
                         try {

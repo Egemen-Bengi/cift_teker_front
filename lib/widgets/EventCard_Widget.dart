@@ -1,5 +1,6 @@
 import 'package:cift_teker_front/screens/GroupEvent/event_detail_page.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/responses/groupEvent_response.dart';
 
 class EventCard extends StatelessWidget {
@@ -9,6 +10,9 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+    final start = DateFormat('dd MMM yyyy, HH:mm').format(event.startDateTime);
+    final end = DateFormat('dd MMM yyyy, HH:mm').format(event.endDateTime);
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -19,7 +23,7 @@ class EventCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white, // Kartın tüm arka planı beyaz
+          color: Colors.white, 
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -87,7 +91,7 @@ class EventCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      "${event.startDateTime} - ${event.endDateTime}",
+                      "$start — $end",
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[700],
@@ -107,7 +111,7 @@ class EventCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      "${event.startLocation} → ${event.endLocation}",
+                      "${event.startLocation} → ${event.endLocation}     /     ${event.city}",
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black87,

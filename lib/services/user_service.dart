@@ -1,4 +1,6 @@
+import 'package:cift_teker_front/models/responses/updateUsername_response.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/requests/user_request.dart';
 import '../models/requests/updateUsername_request.dart';
 import '../models/responses/user_response.dart';
@@ -39,7 +41,7 @@ class UserService {
   }
 
   // kullanıcı adı güncelleme
-  Future<ApiResponse<UserResponse?>> updateUsername(
+  Future<ApiResponse<UpdateUsernameResponse?>> updateUsername(
     UpdateUsernameRequest request,
     String token,
   ) async {
@@ -50,11 +52,17 @@ class UserService {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return ApiResponse.fromJson(
+      final apiResponse = ApiResponse.fromJson(
         response.data,
-        (json) => UserResponse.fromJson(json),
+        (json) => UpdateUsernameResponse.fromJson(json),
       );
 
+      if (apiResponse.data.token != null) {
+        const storage = FlutterSecureStorage();
+        await storage.write(key: "auth_token", value: apiResponse.data.token);
+      }
+
+      return apiResponse;
     } on DioException catch (e) {
       return ApiResponse(
         message: "Hata: ${e.response?.data ?? e.message}",
@@ -63,7 +71,6 @@ class UserService {
       );
     }
   }
-
 
   // profil resmi güncelleme
   Future<ApiResponse<UserResponse>> updateProfileImage(

@@ -18,13 +18,14 @@ class RideHistoryRequest {
   });
 
   Map<String, dynamic> toJson() {
+    String formatDateTime(DateTime dt) => dt.toIso8601String().split('.').first;
     return {
       "mapData": mapData,
       "distanceKm": distanceKm,
       "durationSeconds": durationSeconds,
       "averageSpeedKmh": averageSpeedKmh,
-      "startDateTime": startDateTime.toIso8601String(),
-      "endDateTime": endDateTime.toIso8601String(),
+      "startDateTime": formatDateTime(startDateTime),
+      "endDateTime": formatDateTime(endDateTime),
       if (groupEventId != null) "groupEventId": groupEventId,
     };
   }

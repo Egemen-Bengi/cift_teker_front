@@ -11,6 +11,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showBackButton;
   final VoidCallback? onBackButtonPressed;
   final bool showAvatar;
+  final PreferredSizeWidget? bottom;
 
   const CustomAppBar({
     super.key,
@@ -23,6 +24,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBackButton = false,
     this.onBackButtonPressed,
     this.showAvatar = true,
+    this.bottom,
   });
 
   @override
@@ -52,7 +54,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onTap: () {
                   final mainNavState = context
                       .findAncestorStateOfType<MainNavigationState>();
-                  mainNavState?.onItemTapped(3);
+                  mainNavState?.onItemTapped(5);
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -70,9 +72,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ]
           : [],
+      bottom: bottom,
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 }
