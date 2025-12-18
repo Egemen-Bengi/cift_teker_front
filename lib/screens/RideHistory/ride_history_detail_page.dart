@@ -128,48 +128,76 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
     );
   }
 
-  void _openShareDialog() async {
+  void _openShareDialog() {
     _nameController.clear();
     _descController.clear();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Rotayı Paylaş"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: "Rota Adı"),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _descController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: "Açıklama"),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _shareRoute();
-            },
-            child: const Text("Paylaş"),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (context) {
+        bool isLoading = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Rotayı Paylaş"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: "Rota Adı"),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _descController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: "Açıklama"),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text("İptal"),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isLoading = true);
+
+                          final success = await _shareRoute();
+
+                          if (success && context.mounted) {
+                            Navigator.pop(context);
+                          }
+
+                          if (context.mounted) {
+                            setDialogState(() => isLoading = false);
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text("Paylaş"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Future<void> _shareRoute() async {
-    setState(() => _isSharing = true);
-
+  Future<bool> _shareRoute() async {
     try {
       final imageUrl = await _captureAndUploadMap();
       final token = await _storage.read(key: "auth_token");
@@ -193,6 +221,7 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
           ),
         );
       }
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,9 +231,8 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isSharing = false);
     }
+    return false;
   }
 
   Future<String?> _captureAndUploadMap() async {
