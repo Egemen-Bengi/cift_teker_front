@@ -12,6 +12,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBackButtonPressed;
   final bool showAvatar;
   final PreferredSizeWidget? bottom;
+  final List<Widget>? actions;
 
   const CustomAppBar({
     super.key,
@@ -25,6 +26,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onBackButtonPressed,
     this.showAvatar = true,
     this.bottom,
+    this.actions,
   });
 
   @override
@@ -48,30 +50,31 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: titleColor,
         ),
       ),
-      actions: showAvatar
-          ? [
-              GestureDetector(
-                onTap: () {
-                  final mainNavState = context
-                      .findAncestorStateOfType<MainNavigationState>();
-                  mainNavState?.onItemTapped(5);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey.shade300,
-                    backgroundImage: profileImageUrl != null
-                        ? NetworkImage(profileImageUrl!)
-                        : null,
-                    child: profileImageUrl == null
-                        ? const Icon(Icons.person, color: Colors.white)
-                        : null,
-                  ),
-                ),
+      actions: [
+        if (actions != null)
+          ...actions!, // Dışarıdan gelen butonlar (Paylaş vs.)
+        if (showAvatar)
+          GestureDetector(
+            onTap: () {
+              final mainNavState = context
+                  .findAncestorStateOfType<MainNavigationState>();
+              mainNavState?.onItemTapped(5);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey.shade300,
+                backgroundImage: profileImageUrl != null
+                    ? NetworkImage(profileImageUrl!)
+                    : null,
+                child: profileImageUrl == null
+                    ? const Icon(Icons.person, color: Colors.white)
+                    : null,
               ),
-            ]
-          : [],
+            ),
+          ),
+      ],
       bottom: bottom,
     );
   }
