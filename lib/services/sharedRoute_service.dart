@@ -77,6 +77,18 @@ class SharedRouteService {
     );
   }
 
+  Future<SharedRouteResponse> getSharedRouteById(
+    int sharedRouteId,
+    String token,
+  ) async {
+    final response = await _dio.get(
+      "/$sharedRouteId",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return SharedRouteResponse.fromJson(response.data["object"]);
+  }
+
   // Hata yönetimi
   Exception _handleError(DioException e) {
     if (e.response != null) {

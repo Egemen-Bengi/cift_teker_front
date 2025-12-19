@@ -9,7 +9,9 @@ class RecordService {
       "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/records";
 
   Future<ApiResponse<RecordResponse>> saveRecord(
-      int sharedRouteId, String token) async {
+    int sharedRouteId,
+    String token,
+  ) async {
     final url = Uri.parse("$baseUrl/saveRecord/$sharedRouteId");
 
     final response = await http.post(
@@ -27,12 +29,12 @@ class RecordService {
       );
     } else {
       throw Exception(
-          "Save record failed: ${response.statusCode} - ${response.body}");
+        "Save record failed: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 
-  Future<ApiResponse<String>> deleteRecord(
-      int recordId, String token) async {
+  Future<ApiResponse<String>> deleteRecord(int recordId, String token) async {
     final url = Uri.parse("$baseUrl/deleteRecord/$recordId");
 
     final response = await http.delete(
@@ -46,11 +48,44 @@ class RecordService {
     if (response.statusCode == 200) {
       return ApiResponse.fromJson(
         jsonDecode(response.body),
-            (data) => data.toString(),
+        (data) => data.toString(),
       );
     } else {
       throw Exception(
-          "Delete record failed: ${response.statusCode} - ${response.body}");
+        "Delete record failed: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
+
+  //getirme
+  Future<ApiResponse<List<RecordResponse>>> getMyRecords(String token) async {
+    final url = Uri.parse("$baseUrl/me");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      final List list = decoded["object"];
+
+      final records = list
+          .map((e) => RecordResponse.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      return ApiResponse<List<RecordResponse>>(
+        data: records,
+        message: decoded["message"],
+      );
+    } else {
+      throw Exception(
+        "Get my records failed: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 }
