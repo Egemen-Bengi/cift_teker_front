@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../models/responses/sharedRoute_response.dart';
 
 class SharedRouteCard extends StatelessWidget {
@@ -9,34 +10,68 @@ class SharedRouteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    final createdAt = DateFormat(
+      'dd MMM yyyy, HH:mm',
+    ).format(sharedRoute.createdAt);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.person, size: 20, color: Colors.grey),
-                const SizedBox(width: 6),
-                Text(
-                  sharedRoute.username,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person, size: 16, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        sharedRoute.username,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                Icon(Icons.more_vert, color: Colors.grey[700]),
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
 
             Text(
               sharedRoute.routeName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade800,
+              ),
             ),
 
             const SizedBox(height: 6),
@@ -44,14 +79,15 @@ class SharedRouteCard extends StatelessWidget {
             if (sharedRoute.description != null)
               Text(
                 sharedRoute.description!,
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                style: TextStyle(fontSize: 14, color: Colors.grey[800]),
               ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: sharedRoute.imageUrl != null &&
+              borderRadius: BorderRadius.circular(12),
+              child:
+                  sharedRoute.imageUrl != null &&
                       sharedRoute.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: sharedRoute.imageUrl!,
@@ -75,32 +111,61 @@ class SharedRouteCard extends StatelessWidget {
                     ),
             ),
 
-            const SizedBox(height: 10),
-
-            Text(
-              "Paylaşım: ${sharedRoute.createdAt.toLocal()}",
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
+            const SizedBox(height: 12),
 
             Row(
               children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.favorite_border),
+                Icon(
+                  Icons.access_time,
+                  size: 18,
+                  color: Colors.orange.shade700,
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.chat_bubble_outline),
+                const SizedBox(width: 6),
+                Text(
+                  "Paylaşım: $createdAt",
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.bookmark_border),
-                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _ActionButton(icon: Icons.favorite_border, label: "Beğen"),
+                _ActionButton(icon: Icons.chat_bubble_outline, label: "Yorum"),
+                _ActionButton(icon: Icons.bookmark_border, label: "Kaydet"),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _ActionButton({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.orange.shade700),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.orange.shade700,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

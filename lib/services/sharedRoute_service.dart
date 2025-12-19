@@ -44,7 +44,9 @@ class SharedRouteService {
   }
 
   // Kullanıcının rotalarını listeleme
-  Future<List<SharedRouteResponse>> getSharedRoutes(String token) async {
+  Future<ApiResponse<List<SharedRouteResponse>>> getSharedRoutes(
+    String token,
+  ) async {
     try {
       final response = await _dio.get(
         "/me",
@@ -52,28 +54,28 @@ class SharedRouteService {
       );
 
       final List list = response.data["object"];
-      return list.map((e) => SharedRouteResponse.fromJson(e)).toList();
+      final routes = list.map((e) => SharedRouteResponse.fromJson(e)).toList();
+      return ApiResponse(data: routes, message: "Benim paylaştığım rotalar");
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
   // Tüm rotaları listeleme
- Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
-  String token,
-) async {
-  final response = await _dio.get(
-    "/all",
-    options: Options(headers: {"Authorization": "Bearer $token"}),
-  );
+  Future<ApiResponse<List<SharedRouteResponse>>> getAllSharedRoutes(
+    String token,
+  ) async {
+    final response = await _dio.get(
+      "/all",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
 
-  return ApiResponse.fromJson(
-    response.data,
-    (object) => (object as List)
-        .map((e) => SharedRouteResponse.fromJson(e))
-        .toList(),
-  );
-}
+    return ApiResponse.fromJson(
+      response.data,
+      (object) =>
+          (object as List).map((e) => SharedRouteResponse.fromJson(e)).toList(),
+    );
+  }
 
   // Hata yönetimi
   Exception _handleError(DioException e) {
