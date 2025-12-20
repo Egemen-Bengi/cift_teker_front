@@ -1,5 +1,9 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/models/responses/like_response.dart';
+import 'package:cift_teker_front/models/responses/record_response.dart';
 import 'package:cift_teker_front/models/responses/sharedRoute_response.dart';
+import 'package:cift_teker_front/services/like_service.dart';
+import 'package:cift_teker_front/services/record_service.dart';
 import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
@@ -17,13 +21,16 @@ class _SharedRoutePageState extends State<SharedRoutePage>
     with SingleTickerProviderStateMixin {
   final SharedRouteService _sharedRouteService = SharedRouteService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final LikeService _likeService = LikeService();
+  final RecordService _recordService = RecordService();
 
   late TabController _tabController;
 
-  late Future<ApiResponse<List<SharedRouteResponse>>> _futureAllSharedRoutes;
-  late Future<ApiResponse<List<SharedRouteResponse>>> _futureMySharedRoutes;
+  Future<ApiResponse<List<SharedRouteResponse>>>? _futureAllSharedRoutes;
+  Future<ApiResponse<List<SharedRouteResponse>>>? _futureMySharedRoutes;
 
-  bool _dataLoaded = false;
+  Map<int, LikeResponse> _myLikes = {};
+  Map<int, RecordResponse> _myRecords = {};
 
   @override
   void initState() {
@@ -34,59 +41,35 @@ class _SharedRoutePageState extends State<SharedRoutePage>
 
   Future<void> _loadEvents() async {
     final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
 
-    if (token == null || token.isEmpty) {
-      setState(() {
-        _futureAllSharedRoutes = Future.error(
-          "Kullanıcı doğrulaması başarısız.",
-        );
-        _futureMySharedRoutes = Future.error(
-          "Kullanıcı doğrulaması başarısız.",
-        );
-        _dataLoaded = true;
-      });
-      return;
-    }
+    final allRoutes = await _sharedRouteService.getAllSharedRoutes(token);
+    final myRoutes = await _sharedRouteService.getSharedRoutes(token);
 
-    try {
-      final allSharedRoutes = await _sharedRouteService.getAllSharedRoutes(
-        token,
-      );
-      final mySharedRoutes = await _sharedRouteService.getSharedRoutes(token);
+    final likes = await _likeService.getMyLikes(token);
+    final records = await _recordService.getMyRecords(token);
 
-      /// Benim paylaştıklarımı tüm paylaşılanlardan çıkar
-      final myRouteIds = mySharedRoutes.data
-          .map((e) => e.sharedRouteId)
-          .toSet();
+    _myLikes = {for (var like in likes.data) like.sharedRouteId: like};
+    _myRecords = {
+      for (var record in records.data) record.sharedRouteId: record,
+    };
 
-      final filteredAllRoutes = allSharedRoutes.data
-          .where((e) => !myRouteIds.contains(e.sharedRouteId))
-          .toList();
+    final myIds = myRoutes.data.map((e) => e.sharedRouteId).toSet();
 
-      setState(() {
-        _futureAllSharedRoutes = Future.value(
-          ApiResponse(
-            data: filteredAllRoutes,
-            message: "Tüm paylaşılan rotalar",
-          ),
-        );
+    _futureAllSharedRoutes = Future.value(
+      ApiResponse(
+        data: allRoutes.data
+            .where((e) => !myIds.contains(e.sharedRouteId))
+            .toList(),
+        message: "Tüm paylaşımlar",
+      ),
+    );
 
-        _futureMySharedRoutes = Future.value(
-          ApiResponse(
-            data: mySharedRoutes.data,
-            message: "Benim paylaştığım rotalar",
-          ),
-        );
+    _futureMySharedRoutes = Future.value(
+      ApiResponse(data: myRoutes.data, message: "Benim paylaşımlarım"),
+    );
 
-        _dataLoaded = true;
-      });
-    } catch (e) {
-      setState(() {
-        _futureAllSharedRoutes = Future.error("Hata oluştu: $e");
-        _futureMySharedRoutes = Future.error("Hata oluştu: $e");
-        _dataLoaded = true;
-      });
-    }
+    setState(() {});
   }
 
   Widget _buildRouteList(
@@ -94,17 +77,9 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   ) {
     return FutureBuilder<ApiResponse<List<SharedRouteResponse>>>(
       future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (_, snapshot) {
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text("Hata oluştu: ${snapshot.error}"));
-        }
-
-        if (snapshot.data == null || snapshot.data!.data.isEmpty) {
-          return const Center(child: Text("Hiç paylaşım bulunamadı"));
         }
 
         final routes = snapshot.data!.data
@@ -112,8 +87,13 @@ class _SharedRoutePageState extends State<SharedRoutePage>
 
         return ListView.builder(
           itemCount: routes.length,
-          itemBuilder: (context, index) {
-            return SharedRouteCard(sharedRoute: routes[index]);
+          itemBuilder: (_, index) {
+            final route = routes[index];
+            return SharedRouteCard(
+              sharedRoute: route,
+              myLike: _myLikes[route.sharedRouteId],
+              myRecord: _myRecords[route.sharedRouteId],
+            );
           },
         );
       },
@@ -121,16 +101,11 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!_dataLoaded) {
+    if (_futureAllSharedRoutes == null || _futureMySharedRoutes == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
     return Scaffold(
       appBar: CustomAppBar(
         title: "Paylaşılan Rotalar",
@@ -145,8 +120,8 @@ class _SharedRoutePageState extends State<SharedRoutePage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRouteList(_futureAllSharedRoutes),
-          _buildRouteList(_futureMySharedRoutes),
+          _buildRouteList(_futureAllSharedRoutes!),
+          _buildRouteList(_futureMySharedRoutes!),
         ],
       ),
     );

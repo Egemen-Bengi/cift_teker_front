@@ -58,4 +58,24 @@ class CommentService {
       throw Exception("getMyComments hatası: $e");
     }
   }
+
+  // route'a ait yorumlar
+  Future<ApiResponse<List<CommentResponse>>> getCommentsByRoute(
+    int sharedRouteId,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.get(
+        "/route/$sharedRouteId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      final List list = response.data["object"];
+      final comments = list.map((e) => CommentResponse.fromJson(e)).toList();
+
+      return ApiResponse(data: comments, message: response.data["message"]);
+    } on DioException catch (e) {
+      throw Exception("getCommentsByRoute hatası: ${e.response?.data}");
+    }
+  }
 }

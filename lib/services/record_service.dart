@@ -1,91 +1,64 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../models/responses/record_response.dart';
 import '../core/models/api_response.dart';
 
 class RecordService {
-  final String baseUrl =
-      "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/records";
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl:
+          "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/records",
+    ),
+  );
 
-  Future<ApiResponse<RecordResponse>> saveRecord(
+  // toggle record
+  Future<ApiResponse<RecordResponse?>> toggleRecord(
     int sharedRouteId,
     String token,
   ) async {
-    final url = Uri.parse("$baseUrl/saveRecord/$sharedRouteId");
+    try {
+      final response = await _dio.post(
+        "/toggle/$sharedRouteId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
       return ApiResponse.fromJson(
-        jsonDecode(response.body),
-        (json) => RecordResponse.fromJson(json as Map<String, dynamic>),
+        response.data,
+        (json) => json == null ? null : RecordResponse.fromJson(json),
       );
-    } else {
-      throw Exception(
-        "Save record failed: ${response.statusCode} - ${response.body}",
-      );
+    } on DioException catch (e) {
+      throw Exception("toggleRecord hatası: ${e.response?.data}");
     }
   }
 
-  Future<ApiResponse<String>> deleteRecord(int recordId, String token) async {
-    final url = Uri.parse("$baseUrl/deleteRecord/$recordId");
-
-    final response = await http.delete(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return ApiResponse.fromJson(
-        jsonDecode(response.body),
-        (data) => data.toString(),
+  // kayıtlı mı?
+  Future<ApiResponse<bool>> isRecorded(int sharedRouteId, String token) async {
+    try {
+      final response = await _dio.get(
+        "/is-recorded/$sharedRouteId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
-    } else {
-      throw Exception(
-        "Delete record failed: ${response.statusCode} - ${response.body}",
-      );
+
+      return ApiResponse.fromJson(response.data, (json) => json as bool);
+    } on DioException catch (e) {
+      throw Exception("isRecorded hatası: ${e.response?.data}");
     }
   }
 
-  //getirme
+  // benim kayıtlarım
   Future<ApiResponse<List<RecordResponse>>> getMyRecords(String token) async {
-    final url = Uri.parse("$baseUrl/me");
-
-    final response = await http.get(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-
-      final List list = decoded["object"];
-
-      final records = list
-          .map((e) => RecordResponse.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      return ApiResponse<List<RecordResponse>>(
-        data: records,
-        message: decoded["message"],
+    try {
+      final response = await _dio.get(
+        "/me",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
-    } else {
-      throw Exception(
-        "Get my records failed: ${response.statusCode} - ${response.body}",
-      );
+
+      final List list = response.data["object"];
+      final records = list.map((e) => RecordResponse.fromJson(e)).toList();
+
+      return ApiResponse(data: records, message: response.data["message"]);
+    } on DioException catch (e) {
+      throw Exception("getMyRecords hatası: ${e.response?.data}");
     }
   }
 }

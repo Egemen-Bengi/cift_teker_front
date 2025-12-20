@@ -11,34 +11,45 @@ class LikeService {
   );
 
   // like kaydetme
-  Future<ApiResponse<LikeResponse>> saveLike(
+  Future<ApiResponse<LikeResponse?>> toggleLike(
     int sharedRouteId,
     String token,
   ) async {
     try {
       final response = await _dio.post(
-        '/saveLike/$sharedRouteId',
+        '/toggle/$sharedRouteId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       return ApiResponse.fromJson(
         response.data,
-        (json) => LikeResponse.fromJson(json),
+        (json) => json == null ? null : LikeResponse.fromJson(json),
       );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // silme
-  Future<ApiResponse<String>> deleteLike(int likeId, String token) async {
+  // like sayısı
+  Future<ApiResponse<int>> getLikeCount(int sharedRouteId) async {
     try {
-      final response = await _dio.delete(
-        '/deleteLike/$likeId',
+      final response = await _dio.get("/count/$sharedRouteId");
+
+      return ApiResponse.fromJson(response.data, (json) => json as int);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // kullanıcı beğenmiş mi
+  Future<ApiResponse<bool>> isLiked(int sharedRouteId, String token) async {
+    try {
+      final response = await _dio.get(
+        "/is-liked/$sharedRouteId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return ApiResponse.fromJson(response.data, (json) => json as String);
+      return ApiResponse.fromJson(response.data, (json) => json as bool);
     } on DioException catch (e) {
       throw _handleError(e);
     }
