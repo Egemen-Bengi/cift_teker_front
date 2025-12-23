@@ -3,38 +3,69 @@ import '../models/responses/like_response.dart';
 import '../../core/models/api_response.dart';
 
 class LikeService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/likes"));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl:
+          "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/likes",
+    ),
+  );
 
   // like kaydetme
-  Future<ApiResponse<LikeResponse>> saveLike(
-      int sharedRouteId, String token) async {
+  Future<ApiResponse<LikeResponse?>> toggleLike(
+    int sharedRouteId,
+    String token,
+  ) async {
     try {
       final response = await _dio.post(
-        '/saveLike/$sharedRouteId',
+        '/toggle/$sharedRouteId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       return ApiResponse.fromJson(
         response.data,
-        (json) => LikeResponse.fromJson(json),
+        (json) => json == null ? null : LikeResponse.fromJson(json),
       );
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  // silme
-  Future<ApiResponse<String>> deleteLike(int likeId, String token) async {
+  // like sayısı
+  Future<ApiResponse<int>> getLikeCount(int sharedRouteId) async {
     try {
-      final response = await _dio.delete(
-        '/deleteLike/$likeId',
+      final response = await _dio.get("/count/$sharedRouteId");
+
+      return ApiResponse.fromJson(response.data, (json) => json as int);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // kullanıcı beğenmiş mi
+  Future<ApiResponse<bool>> isLiked(int sharedRouteId, String token) async {
+    try {
+      final response = await _dio.get(
+        "/is-liked/$sharedRouteId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      return ApiResponse.fromJson(
-        response.data,
-        (json) => json as String,
+      return ApiResponse.fromJson(response.data, (json) => json as bool);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  //getirme
+  Future<ApiResponse<List<LikeResponse>>> getMyLikes(String token) async {
+    try {
+      final response = await _dio.get(
+        "/me",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
+
+      final List list = response.data["object"];
+      final likes = list.map((e) => LikeResponse.fromJson(e)).toList();
+      return ApiResponse(data: likes, message: "Benim beğenilerim");
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -43,7 +74,8 @@ class LikeService {
   Exception _handleError(DioException e) {
     if (e.response != null) {
       return Exception(
-          "API Error: ${e.response?.statusCode} - ${e.response?.data}");
+        "API Error: ${e.response?.statusCode} - ${e.response?.data}",
+      );
     }
     return Exception("Bağlantı hatası: ${e.message}");
   }
