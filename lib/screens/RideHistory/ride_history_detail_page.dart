@@ -1,10 +1,15 @@
 import 'dart:async';
+
 import 'package:cift_teker_front/formatter/parse_map_data.dart';
+import 'package:cift_teker_front/models/requests/sharedRoute_request.dart';
 import 'package:cift_teker_front/models/responses/rideHistory_response.dart';
+import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class RideDetailMapPage extends StatefulWidget {
   final RideHistoryResponse ride;
@@ -16,11 +21,15 @@ class RideDetailMapPage extends StatefulWidget {
 }
 
 class _RideDetailMapPageState extends State<RideDetailMapPage> {
-  final Completer<GoogleMapController> _mapController = Completer();
-  final MapDataParser _parser = MapDataParser();
-  final Set<Polyline> _polylines = {};
-  final Set<Marker> _markers = {};
+  final _mapController = Completer<GoogleMapController>();
+  final _parser = MapDataParser();
+  final _polylines = <Polyline>{};
+  final _markers = <Marker>{};
+  final _storage = const FlutterSecureStorage();
+  final _nameController = TextEditingController();
+  final _descController = TextEditingController();
   LatLng? _initialPosition;
+  bool _isSharing = false;
 
   @override
   void initState() {
@@ -28,60 +37,75 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
     _loadMapData();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
   void _loadMapData() {
     final points = _parser.parseMapData(widget.ride.mapData);
+    if (points.isEmpty) return;
 
-    if (points.isNotEmpty) {
-      _initialPosition = points.first;
-      _setRouteAndMarkers(points);
+    _initialPosition = points.first;
+    _setRouteAndMarkers(points);
 
-      _mapController.future.then((controller) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _fitMapToRoute(controller, points);
-        });
+    _mapController.future.then((controller) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fitMapToRoute(controller, points);
       });
-    }
+    });
   }
 
   void _setRouteAndMarkers(List<LatLng> points) {
-    if (points.isEmpty) return;
-
     _polylines.add(
       Polyline(
         polylineId: PolylineId('ride_${widget.ride.historyId}'),
         points: points,
         width: 6,
         color: Colors.blue.shade700,
-        endCap: Cap.roundCap,
         startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
       ),
     );
 
-    // Başlangıç ve Bitiş Marker'ları
-    final start = points.first;
-    final end = points.last;
-
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('start_point'),
-        position: start,
-        infoWindow: const InfoWindow(title: 'Başlangıç'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ),
-    );
-
-    if (start != end) {
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('end_point'),
-          position: end,
-          infoWindow: const InfoWindow(title: 'Bitiş'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    _markers
+      ..add(
+        _buildMarker(
+          points.first,
+          'start',
+          'Başlangıç',
+          BitmapDescriptor.hueGreen,
         ),
-      );
-    }
+      )
+      ..add(_buildMarker(points.last, 'end', 'Bitiş', BitmapDescriptor.hueRed));
 
     setState(() {});
+  }
+
+  Marker _buildMarker(LatLng position, String id, String title, double hue) =>
+      Marker(
+        markerId: MarkerId(id),
+        position: position,
+        infoWindow: InfoWindow(title: title),
+        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+      );
+
+  Future<void> _fitMapToRoute(
+    GoogleMapController controller,
+    List<LatLng> points,
+  ) async {
+    final bounds = _getBoundsForPoints(points);
+    if (bounds == null) return;
+
+    try {
+      await controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+    } catch (e) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(points.first, 15),
+      );
+    }
   }
 
   LatLngBounds? _getBoundsForPoints(List<LatLng> points) {
@@ -104,44 +128,163 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
     );
   }
 
-  Future<void> _fitMapToRoute(
-    GoogleMapController controller,
-    List<LatLng> points,
-  ) async {
-    final bounds = _getBoundsForPoints(points);
-    if (bounds == null) return;
+  void _openShareDialog() {
+    _nameController.clear();
+    _descController.clear();
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        bool isLoading = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Rotayı Paylaş"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: "Rota Adı"),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _descController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: "Açıklama"),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text("İptal"),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isLoading = true);
+
+                          final success = await _shareRoute();
+
+                          if (success && context.mounted) {
+                            Navigator.pop(context);
+                          }
+
+                          if (context.mounted) {
+                            setDialogState(() => isLoading = false);
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text("Paylaş"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool> _shareRoute() async {
     try {
-      final camUpdate = CameraUpdate.newLatLngBounds(bounds, 60);
-      await controller.animateCamera(camUpdate);
+      final imageUrl = await _captureAndUploadMap();
+      final token = await _storage.read(key: "auth_token");
+
+      if (token == null) throw "Oturum bilgisi bulunamadı.";
+
+      final request = SharedRouteRequest(
+        routeName: _nameController.text,
+        description: _descController.text,
+        historyId: widget.ride.historyId,
+        imageUrl: imageUrl,
+      );
+
+      await SharedRouteService().saveSharedRoute(request, token);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Rota başarıyla paylaşıldı!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      return true;
     } catch (e) {
-      if (points.isNotEmpty) {
-        await controller.animateCamera(
-          CameraUpdate.newLatLngZoom(points.first, 15),
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Paylaşım başarısız: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
+    return false;
+  }
+
+  Future<String?> _captureAndUploadMap() async {
+    final controller = await _mapController.future;
+    final bytes = await controller.takeSnapshot();
+
+    if (bytes == null) return null;
+
+    final ref = FirebaseStorage.instance.ref(
+      'route_images/ride_${widget.ride.historyId}_${DateTime.now().millisecondsSinceEpoch}.png',
+    );
+
+    final snapshot = await ref.putData(
+      bytes,
+      SettableMetadata(contentType: 'image/png'),
+    );
+
+    return snapshot.ref.getDownloadURL();
   }
 
   String _formatDuration(int seconds) {
     final d = Duration(seconds: seconds);
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final h = twoDigits(d.inHours);
-    final m = twoDigits(d.inMinutes.remainder(60));
-    final s = twoDigits(d.inSeconds.remainder(60));
-    return '$h:$m:$s';
+    String t(int n) => n.toString().padLeft(2, '0');
+    return '${t(d.inHours)}:${t(d.inMinutes.remainder(60))}:${t(d.inSeconds.remainder(60))}';
   }
 
-  String _formatDate(DateTime dt) {
-    return DateFormat('dd MMMM yyyy HH:mm').format(dt);
-  }
+  String _formatDate(DateTime dt) =>
+      DateFormat('dd MMMM yyyy HH:mm').format(dt);
 
   @override
   Widget build(BuildContext context) {
     final ride = widget.ride;
 
     return Scaffold(
-      appBar: CustomAppBar(title: "Sürüş Detayı"),
+      appBar: CustomAppBar(
+        title: "Sürüş Detayı",
+        showAvatar: false,
+        actions: [
+          _isSharing
+              ? const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.share),
+                  onPressed: _openShareDialog,
+                ),
+        ],
+      ),
       body: Column(
         children: [
           Container(

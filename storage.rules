@@ -1,12 +1,13 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+    match /route_images/{allPaths=**} {
+      // Herkesin okumasına izin ver (Sosyal akışta resimlerin görünmesi için)
+      allow read: if true;
+      
+      // Yazma izni: Normalde 'if request.auth != null' istenir.
+      // Eğer Firebase Auth kullanmıyorsan, sadece bu klasöre yazma izni verebilirsin:
+      allow write: if true; 
     }
   }
 }

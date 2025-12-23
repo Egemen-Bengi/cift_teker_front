@@ -9,6 +9,9 @@ import 'package:cift_teker_front/services/user_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:cift_teker_front/screens/like_page.dart';
+import 'package:cift_teker_front/screens/comment_page.dart';
+import 'package:cift_teker_front/screens/record_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -450,6 +453,75 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 15),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Etkileşimlerim",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _interactionButton(
+                        icon: Icons.favorite,
+                        title: "Beğenilerim",
+                        color: Colors.red,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LikePage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _interactionButton(
+                        icon: Icons.chat_bubble_outline,
+                        title: "Yorumlarım",
+                        color: Colors.blue,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CommentPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _interactionButton(
+                        icon: Icons.bookmark,
+                        title: "Kaydedilenler",
+                        color: Colors.orange,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RecordPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 15),
 
                 SizedBox(
                   width: double.infinity,
@@ -476,4 +548,40 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+}
+
+Widget _interactionButton({
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+  Color color = Colors.orange,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.grey),
+        ],
+      ),
+    ),
+  );
 }
