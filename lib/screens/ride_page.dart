@@ -59,26 +59,59 @@ class _RidePageState extends State<RidePage> {
   }
 
   Future<void> _getUserLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      await Geolocator.openLocationSettings();
-      return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        // küçük bir bekleme, kullanıcı ayarları açtıysa değişikliğin yansıması için
+        await Future.delayed(const Duration(seconds: 2));
+        serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          if (mounted) _show("Lütfen konum servislerini açın.");
+          return;
+        }
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (mounted) _show("Konum izni reddedildi.");
+        return;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) _show("Konum izni kalıcı olarak reddedildi. Ayarlardan izin verin.");
+        return;
+      }
+
+      // Konumu al
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        currentPosition = LatLng(pos.latitude, pos.longitude);
+      });
+    } catch (e) {
+      debugPrint('getUserLocation error: $e');
+      // fallback: son bilinen konumu dene
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null && mounted) {
+          setState(() {
+            currentPosition = LatLng(last.latitude, last.longitude);
+          });
+          return;
+        }
+      } catch (e2) {
+        debugPrint('getLastKnownPosition error: $e2');
+      }
+
+      if (mounted) _show("Konum alınamadı: $e");
     }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    if (permission == LocationPermission.deniedForever) return;
-
-    Position pos = await Geolocator.getCurrentPosition();
-
-    if (!mounted) return;
-    setState(() {
-      currentPosition = LatLng(pos.latitude, pos.longitude);
-    });
   }
 
   Future<void> _startRide() async {
