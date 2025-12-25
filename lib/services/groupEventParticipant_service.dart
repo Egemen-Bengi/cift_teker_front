@@ -41,17 +41,22 @@ class GroupEventParticipantService {
   // Etkinlik katılımcılarını getirme
   Future<List<GroupEventParticipantResponse>> getParticipants(
     int groupEventId,
-    String token,
+    String? token,
   ) async {
     try {
       final response = await _dio.get(
         "/get/$groupEventId",
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        options: token != null
+            ? Options(headers: {"Authorization": "Bearer $token"})
+            : null,
       );
 
-      final List<dynamic> list = response.data["object"];
+        final dynamic obj = response.data?["object"];
+        if (obj == null) return <GroupEventParticipantResponse>[];
 
-      return list
+        final List<dynamic> list = obj as List<dynamic>;
+
+        return list
           .map((item) => GroupEventParticipantResponse.fromJson(item))
           .toList();
     } on DioException catch (e) {

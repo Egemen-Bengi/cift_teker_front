@@ -7,6 +7,7 @@ class UserResponse {
   final String role;
   final String? profileImage; 
   final DateTime createdAt;  
+  final String? phoneNumber;
 
   UserResponse({
     required this.userId,
@@ -17,6 +18,7 @@ class UserResponse {
     required this.role,
     required this.profileImage,
     required this.createdAt,
+    required this.phoneNumber,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class UserResponse {
       role: json['role'],
       profileImage: json['profileImage'], 
       createdAt: DateTime.parse(json['createdAt']), 
+      phoneNumber: json['phoneNumber'],
     );
   }
 }

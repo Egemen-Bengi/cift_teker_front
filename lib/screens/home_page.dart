@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage>
   late TabController _tabController;
   late Future<ApiResponse<List<GroupEventResponse>>> _futureAllEvents;
   late Future<ApiResponse<List<GroupEventResponse>>> _futureMyEvents;
+  String? _token;
 
   bool _dataLoaded = false;
 
@@ -37,52 +38,62 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadEvents() async {
-    final token = await _storage.read(key: "auth_token");
+  final token = await _storage.read(key: "auth_token");
+  _token = token;
+  if (!mounted) return;
 
-    if (token == null || token.isEmpty) {
-      setState(() {
-        _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-        _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-        _dataLoaded = true;
-      });
-      return;
-    }
-
-    try {
-      final allEventsResponse = await _eventService.getAllGroupEvents(token);
-      final myEventsResponse = await _eventService.getMyGroupEvents(token);
-
-      final myEventIds = myEventsResponse.data
-          .map((e) => e.groupEventId)
-          .toSet();
-
-      final filteredAllEvents = allEventsResponse.data
-          .where((e) => !myEventIds.contains(e.groupEventId))
-          .toList();
-
-      setState(() {
-        _futureAllEvents = Future.value(
-          ApiResponse(
-            data: filteredAllEvents,
-            message: "Tüm etkinlikler yüklendi",
-          ),
-        );
-        _futureMyEvents = Future.value(
-          ApiResponse(
-            data: myEventsResponse.data,
-            message: "Benim etkinliklerim yüklendi",
-          ),
-        );
-        _dataLoaded = true;
-      });
-    } catch (e) {
-      setState(() {
-        _futureAllEvents = Future.error("Hata oluştu: $e");
-        _futureMyEvents = Future.error("Hata oluştu: $e");
-        _dataLoaded = true;
-      });
-    }
+  if (token == null || token.isEmpty) {
+    if (!mounted) return;
+    setState(() {
+      _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+      _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+      _dataLoaded = true;
+    });
+    return;
   }
+
+  try {
+    final allEventsResponse =
+        await _eventService.getAllGroupEvents(token);
+    if (!mounted) return;
+
+    final myEventsResponse =
+        await _eventService.getMyGroupEvents(token);
+    if (!mounted) return;
+
+    final myEventIds =
+        myEventsResponse.data.map((e) => e.groupEventId).toSet();
+
+    final filteredAllEvents = allEventsResponse.data
+        .where((e) => !myEventIds.contains(e.groupEventId))
+        .toList();
+
+    if (!mounted) return;
+    setState(() {
+      _futureAllEvents = Future.value(
+        ApiResponse(
+          data: filteredAllEvents,
+          message: "Tüm etkinlikler yüklendi",
+        ),
+      );
+      _futureMyEvents = Future.value(
+        ApiResponse(
+          data: myEventsResponse.data,
+          message: "Benim etkinliklerim yüklendi",
+        ),
+      );
+      _dataLoaded = true;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _futureAllEvents = Future.error("Hata oluştu: $e");
+      _futureMyEvents = Future.error("Hata oluştu: $e");
+      _dataLoaded = true;
+    });
+  }
+}
+
 
   Widget _buildCityFilter({required bool isAllTab}) {
     final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
@@ -214,7 +225,7 @@ class _HomePageState extends State<HomePage>
         return ListView.builder(
           itemCount: events.length,
           itemBuilder: (context, index) {
-            return EventCard(event: events[index]);
+            return EventCard(event: events[index], token: _token);
           },
         );
       },

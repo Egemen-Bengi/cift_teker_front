@@ -271,6 +271,186 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+  void updateEmail(UserResponse user) {
+    final emailController = TextEditingController(text: user.email);
+
+    showDialog(
+      context: context,
+      builder: (alertContext) => AlertDialog(
+        title: const Text("E-posta Güncelle"),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: "Yeni e-posta",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(alertContext);
+            },
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newEmail = emailController.text.trim();
+              if (newEmail.isEmpty) {
+                Navigator.pop(alertContext);
+                _showAlertDialog("Hata", "E-posta boş olamaz.");
+                return;
+              }
+
+              BuildContext? loadingContext;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  loadingContext = ctx;
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
+
+              final token = await _storage.read(key: "auth_token");
+
+              if (token == null || token.isEmpty) {
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog("Hata", "Oturum bulunamadı.");
+                return;
+              }
+
+              /*try {
+                final updateResponse = await _userService.updateEmail(
+                  UpdateEmailRequest(newEmail: newEmail),
+                  token,
+                );
+
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+
+                String title, message;
+                if (updateResponse.message.toLowerCase().contains("success") ||
+                    updateResponse.httpStatus == "200") {
+                  setState(() {
+                    _futureUser = _loadUser();
+                  });
+                  title = "Başarılı";
+                  message = "E-postanız güncellendi.";
+                } else {
+                  title = "Hata";
+                  message = "E-posta güncellenemedi: ${updateResponse.message}";
+                }
+
+                Navigator.pop(alertContext);
+
+                await Future.delayed(const Duration(milliseconds: 100));
+
+                _showAlertDialog(title, message);
+              } catch (e) {
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog(
+                  "Hata",
+                  "Güncelleme sırasında hata: ${e.toString()}",
+                );
+              }*/
+            },
+            child: const Text("Güncelle"),
+          ),
+        ],
+      ),
+    ).then((_) {});
+  }
+  void updatePhoneNumber(UserResponse user) {
+    final phoneNumberController = TextEditingController(text: user.phoneNumber);
+
+    showDialog(
+      context: context,
+      builder: (alertContext) => AlertDialog(
+        title: const Text("Telefon Numarası Güncelle"),
+        content: TextField(
+          controller: phoneNumberController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: "Yeni telefon numarası",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(alertContext);
+            },
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newPhoneNumber = phoneNumberController.text.trim();
+              if (newPhoneNumber.isEmpty) {
+                Navigator.pop(alertContext);
+                _showAlertDialog("Hata", "Telefon numarası boş olamaz.");
+                return;
+              }
+
+              BuildContext? loadingContext;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  loadingContext = ctx;
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
+
+              final token = await _storage.read(key: "auth_token");
+
+              if (token == null || token.isEmpty) {
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog("Hata", "Oturum bulunamadı.");
+                return;
+              }
+
+              /*try {
+                final updateResponse = await _userService.updatePhoneNumber(
+                  UpdatePhoneNumberRequest(newPhoneNumber: newPhoneNumber),
+                  token,
+                );
+
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+
+                String title, message;
+                if (updateResponse.message.toLowerCase().contains("success") ||
+                    updateResponse.httpStatus == "200") {
+                  setState(() {
+                    _futureUser = _loadUser();
+                  });
+                  title = "Başarılı";
+                  message = "Telefon numaranız güncellendi.";
+                } else {
+                  title = "Hata";
+                  message = "Telefon numarası güncellenemedi: ${updateResponse.message}";
+                }
+
+                Navigator.pop(alertContext);
+
+                await Future.delayed(const Duration(milliseconds: 100));
+
+                _showAlertDialog(title, message);
+              } catch (e) {
+                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                Navigator.pop(alertContext);
+                _showAlertDialog(
+                  "Hata",
+                  "Güncelleme sırasında hata: ${e.toString()}",
+                );
+              }*/
+            },
+            child: const Text("Güncelle"),
+          ),
+        ],
+      ),
+    ).then((_) {});
+  }
 
   Future<void> _logout() async {
     showDialog(
@@ -431,8 +611,31 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
 
-                const SizedBox(height: 15),
+                  const SizedBox(height: 12),
+                  // E-posta güncelle butonu
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => updateEmail(user),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "E-posta Güncelle",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
 
+                const SizedBox(height: 15),
+                // Şifre güncelle butonu
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -453,6 +656,23 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 15),
+                //  Telefon numarası güncelle butonu
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => updatePhoneNumber(user),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text("Telefon Numarasını Güncelle", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
