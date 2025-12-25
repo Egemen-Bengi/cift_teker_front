@@ -20,7 +20,7 @@ class RidePage extends StatefulWidget {
 
 class _RidePageState extends State<RidePage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  RideHistoryService rideService = RideHistoryService();
+  final RideHistoryService rideService = RideHistoryService();
 
   GoogleMapController? mapController;
   LatLng? currentPosition;
@@ -28,11 +28,10 @@ class _RidePageState extends State<RidePage> {
   StompClient? stompClient;
   Timer? _timer;
 
-  List<LatLng> ridePoints = [];
+  final List<LatLng> ridePoints = [];
   int? rideId;
 
   bool isPageReady = false;
-
   String? token;
 
   @override
@@ -44,6 +43,8 @@ class _RidePageState extends State<RidePage> {
   Future<void> _initializePage() async {
     await _getToken();
     await _getUserLocation();
+
+    if (!mounted) return;
     setState(() {
       isPageReady = true;
     });
@@ -52,7 +53,7 @@ class _RidePageState extends State<RidePage> {
   Future<void> _getToken() async {
     token = await _storage.read(key: "auth_token");
 
-    if (token == null || token!.isEmpty) {
+    if ((token == null || token!.isEmpty) && mounted) {
       _show("Token bulunamadı.");
     }
   }
@@ -74,6 +75,7 @@ class _RidePageState extends State<RidePage> {
 
     Position pos = await Geolocator.getCurrentPosition();
 
+    if (!mounted) return;
     setState(() {
       currentPosition = LatLng(pos.latitude, pos.longitude);
     });
@@ -96,12 +98,14 @@ class _RidePageState extends State<RidePage> {
 
       stompClient = StompClient(
         config: StompConfig.sockJS(
-          url: 'https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ws',
+          url:
+              'https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ws',
           stompConnectHeaders: {'Authorization': 'Bearer $token'},
           webSocketConnectHeaders: {'Authorization': 'Bearer $token'},
           onConnect: _onStompConnect,
-          onWebSocketError: (err) => print("WebSocket Hata: $err"),
-          onStompError: (frame) => print("STOMP Hata: ${frame.body}"),
+          onWebSocketError: (err) => debugPrint("WebSocket Hata: $err"),
+          onStompError: (frame) =>
+              debugPrint("STOMP Hata: ${frame.body}"),
         ),
       );
 
@@ -112,24 +116,28 @@ class _RidePageState extends State<RidePage> {
   }
 
   void _onStompConnect(StompFrame frame) {
-    print('STOMP Bağlantısı başarılı!');
-
     stompClient!.subscribe(
       destination: '/topic/ride/$rideId',
-      callback: (StompFrame frame) {
-        print('Mesaj alındı: ${frame.body}');
+      callback: (frame) {
+        debugPrint('Mesaj alındı: ${frame.body}');
       },
     );
 
     _timer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted) return;
+
       Position pos = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
+
       LatLng point = LatLng(pos.latitude, pos.longitude);
       ridePoints.add(point);
 
+      if (!mounted) return;
       setState(() {});
 
-      if (mapController != null) {
-        mapController!.animateCamera(CameraUpdate.newLatLng(point));
+      if (mapController != null && mounted) {
+        mapController!
+            .animateCamera(CameraUpdate.newLatLng(point));
       }
 
       stompClient?.send(
@@ -144,6 +152,7 @@ class _RidePageState extends State<RidePage> {
 
   Future<void> _stopRide() async {
     _timer?.cancel();
+    _timer = null;
 
     await _getToken();
     if (token == null || token!.isEmpty) {
@@ -156,25 +165,24 @@ class _RidePageState extends State<RidePage> {
       return;
     }
 
-    String mapData = jsonEncode(
+    final mapData = jsonEncode(
       ridePoints
           .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
           .toList(),
     );
 
-    double distanceKm = calculateDistanceKm(ridePoints);
-    int durationSeconds = ridePoints.length * 5;
-    double averageSpeedKmh = calculateAverageSpeed(distanceKm, durationSeconds);
-    DateTime startDateTime = DateTime.now().subtract(
-      Duration(seconds: durationSeconds),
-    );
+    final double distanceKm = calculateDistanceKm(ridePoints);
+    final int durationSeconds = ridePoints.length * 5;
+    final double averageSpeedKmh =
+        calculateAverageSpeed(distanceKm, durationSeconds);
 
-    RideHistoryRequest req = RideHistoryRequest(
+    final RideHistoryRequest req = RideHistoryRequest(
       mapData: mapData,
       distanceKm: distanceKm,
       durationSeconds: durationSeconds,
       averageSpeedKmh: averageSpeedKmh,
-      startDateTime: startDateTime,
+      startDateTime:
+          DateTime.now().subtract(Duration(seconds: durationSeconds)),
       endDateTime: DateTime.now(),
     );
 
@@ -184,6 +192,7 @@ class _RidePageState extends State<RidePage> {
       stompClient?.deactivate();
       stompClient = null;
 
+      if (!mounted) return;
       setState(() {
         ridePoints.clear();
         rideId = null;
@@ -213,8 +222,23 @@ class _RidePageState extends State<RidePage> {
   double calculateAverageSpeed(double km, int sec) =>
       sec == 0 ? 0 : km / (sec / 3600);
 
-  void _show(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  void _show(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    stompClient?.deactivate();
+    mapController?.dispose();
+
+    _timer = null;
+    stompClient = null;
+    mapController = null;
+
+    super.dispose();
   }
 
   @override
@@ -241,7 +265,6 @@ class _RidePageState extends State<RidePage> {
                     ),
                   },
                 ),
-
                 Positioned(
                   bottom: 30,
                   left: 20,
@@ -251,7 +274,8 @@ class _RidePageState extends State<RidePage> {
                         ? null
                         : (rideId == null ? _startRide : _stopRide),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -260,8 +284,8 @@ class _RidePageState extends State<RidePage> {
                       !isPageReady
                           ? "Yükleniyor..."
                           : (rideId == null
-                                ? "Bireysel Sürüşü Başlat"
-                                : "Sürüşü Bitir"),
+                              ? "Bireysel Sürüşü Başlat"
+                              : "Sürüşü Bitir"),
                       style: const TextStyle(fontSize: 18),
                     ),
                   ),
