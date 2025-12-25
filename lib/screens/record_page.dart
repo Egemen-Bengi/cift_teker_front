@@ -1,10 +1,12 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/enum/DetailEntrySource.dart';
 import 'package:cift_teker_front/models/responses/record_response.dart';
 import 'package:cift_teker_front/models/responses/sharedRoute_response.dart';
+import 'package:cift_teker_front/screens/shared_route_detail_page.dart';
 import 'package:cift_teker_front/services/record_service.dart';
 import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
-import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
+import 'package:cift_teker_front/widgets/RouteGridItem_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -83,11 +85,37 @@ class _RecordPageState extends State<RecordPage> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
+          return GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.75,
+            ),
             itemCount: routes.length,
             itemBuilder: (context, index) {
-              return SharedRouteCard(sharedRoute: routes[index]);
+              final route = routes[index];
+
+              return RouteGridItem(
+                route: route,
+                onTap: () async {
+                  final bool? changed = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SharedRouteDetailPage(
+                        sharedRouteId: route.sharedRouteId,
+                        entrySource: DetailEntrySource.recorded,
+                      ),
+                    ),
+                  );
+                  if (changed == true) {
+                    setState(() {
+                      _futureRecordedRoutes = _loadRecordedRoutes();
+                    });
+                  }
+                },
+              );
             },
           );
         },

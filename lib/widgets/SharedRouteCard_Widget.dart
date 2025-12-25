@@ -13,12 +13,16 @@ class SharedRouteCard extends StatefulWidget {
   final SharedRouteResponse sharedRoute;
   final LikeResponse? myLike;
   final RecordResponse? myRecord;
+  final bool isDetail;
+  final VoidCallback? onChanged;
 
   const SharedRouteCard({
     super.key,
     required this.sharedRoute,
     this.myLike,
     this.myRecord,
+    this.isDetail = false,
+    this.onChanged,
   });
 
   @override
@@ -58,6 +62,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     setState(() {
       isLiked = !isLiked;
     });
+    widget.onChanged?.call();
   }
 
   Future<void> _toggleRecord() async {
@@ -69,6 +74,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     setState(() {
       isRecorded = !isRecorded;
     });
+    widget.onChanged?.call();
   }
 
   Future<void> _sendComment() async {
