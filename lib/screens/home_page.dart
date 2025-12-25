@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage>
   late TabController _tabController;
   late Future<ApiResponse<List<GroupEventResponse>>> _futureAllEvents;
   late Future<ApiResponse<List<GroupEventResponse>>> _futureMyEvents;
+  String? _token;
 
   bool _dataLoaded = false;
 
@@ -38,6 +39,7 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _loadEvents() async {
   final token = await _storage.read(key: "auth_token");
+  _token = token;
   if (!mounted) return;
 
   if (token == null || token.isEmpty) {
@@ -223,7 +225,7 @@ class _HomePageState extends State<HomePage>
         return ListView.builder(
           itemCount: events.length,
           itemBuilder: (context, index) {
-            return EventCard(event: events[index]);
+            return EventCard(event: events[index], token: _token);
           },
         );
       },
