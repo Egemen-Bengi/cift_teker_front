@@ -11,6 +11,7 @@ class GroupEventResponse {
   final int userId;
   final String username;
   final String? city;
+  final bool isJoined;
 
   GroupEventResponse({
     required this.groupEventId,
@@ -25,6 +26,7 @@ class GroupEventResponse {
     required this.userId,
     required this.username,
     this.city,
+    this.isJoined = false,
   });
 
   factory GroupEventResponse.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class GroupEventResponse {
       userId: json["userId"],
       username: json["username"],
       city: json["city"],
+      isJoined: json["isJoined"] ?? false,
     );
   }
 }
