@@ -19,6 +19,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   bool _isLoading = false;
+  late bool _isJoined;
+
+  @override
+  void initState() {
+    super.initState();
+    _isJoined = widget.event.isJoined;
+  }
 
   Future<String?> _getToken() async {
     return await _storage.read(key: "auth_token");
@@ -33,9 +40,18 @@ class _EventDetailPageState extends State<EventDetailPage> {
     try {
       await _participantService.joinEvent(widget.event.groupEventId, token);
 
+      setState(() {
+        _isJoined = true;
+      });
+      if(!mounted) return;
       showAlertDialog(context, "Başarılı", "Etkinliğe katıldınız");
     } catch (e) {
-      showAlertDialog(context, "Hata", "Etkinliğe katılırken bir hata oluştu. Etkinlik dolmuş olabilir veya zaten katılmış olabilirsiniz.");
+      if(!mounted) return;
+      showAlertDialog(
+        context,
+        "Hata",
+        "Etkinliğe katılırken bir hata oluştu.",
+      );
     }
 
     setState(() => _isLoading = false);
@@ -50,9 +66,18 @@ class _EventDetailPageState extends State<EventDetailPage> {
     try {
       await _participantService.leaveEvent(widget.event.groupEventId, token);
 
-      showAlertDialog(context,"Başarılı" ,"Etkinlikten ayrıldınız.");
+      setState(() {
+        _isJoined = false;
+      });
+      if(!mounted) return;
+      showAlertDialog(context, "Başarılı", "Etkinlikten ayrıldınız.");
     } catch (e) {
-      showAlertDialog(context,"Hata" ,"Çıkmak için ilk önce giriş yapmalısınız.");
+      if(!mounted) return;
+      showAlertDialog(
+        context,
+        "Hata",
+        "Etkinlikten ayrılırken bir hata oluştu.",
+      );
     }
 
     setState(() => _isLoading = false);
@@ -81,13 +106,14 @@ class _EventDetailPageState extends State<EventDetailPage> {
           : Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.white),
+              color: Colors.white,
               child: Column(
                 children: [
                   _buildActionButton(
                     text: "Etkinliğe Katıl",
                     icon: Icons.check_circle_outline,
                     color: Colors.green,
+                    isEnabled: !_isJoined,
                     onTap: _joinEvent,
                   ),
                   const SizedBox(height: 16),
@@ -96,6 +122,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     text: "Etkinlikten Ayrıl",
                     icon: Icons.cancel_outlined,
                     color: Colors.red,
+                    isEnabled: _isJoined,
                     onTap: _leaveEvent,
                   ),
                   const SizedBox(height: 16),
@@ -104,6 +131,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     text: "Katılımcıları Gör",
                     icon: Icons.people_outline,
                     color: Colors.blue,
+                    isEnabled: true,
                     onTap: _openParticipants,
                   ),
                 ],
@@ -111,23 +139,20 @@ class _EventDetailPageState extends State<EventDetailPage> {
             ),
     );
   }
-  void showAlertDialog(BuildContext context, String title , String message) {
+
+  void showAlertDialog(BuildContext context, String title, String message) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Tamam"),
-            ),
-          ],
-        );
-      },
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Tamam"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -135,24 +160,29 @@ class _EventDetailPageState extends State<EventDetailPage> {
     required String text,
     required IconData icon,
     required Color color,
+    required bool isEnabled,
     required VoidCallback onTap,
   }) {
+    final effectiveColor = isEnabled ? color : Colors.grey.shade400;
+
     return InkWell(
-      onTap: onTap,
+      onTap: isEnabled ? onTap : null,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         height: 55,
         decoration: BoxDecoration(
-          color: color,
+          color: effectiveColor,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 10,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: isEnabled
+              ? [
+                  BoxShadow(
+                    color: effectiveColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
