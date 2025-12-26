@@ -98,6 +98,7 @@ class UserService {
       }
     }
   }
+  // buraya email güncelleme fonksiyonu eklenecek \\
 
   // giriş yapmış kullanıcının bilgilerini getirme
   Future<ApiResponse<UserResponse>> getMyInfo(String token) async {

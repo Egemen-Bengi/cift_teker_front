@@ -2,11 +2,14 @@ import 'package:cift_teker_front/screens/GroupEvent/event_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/responses/groupEvent_response.dart';
+import '../models/responses/groupEventParticipant_response.dart';
+import '../services/groupEventParticipant_service.dart';
 
 class EventCard extends StatelessWidget {
   final GroupEventResponse event;
+  final String? token;
 
-  const EventCard({super.key, required this.event});
+  const EventCard({super.key, required this.event, this.token});
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +114,7 @@ class EventCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      "${event.startLocation} → ${event.endLocation}     /     ${event.city}",
+                      "${event.startLocation} → ${event.endLocation}   /  ${event.city}",
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black87,
@@ -142,12 +145,34 @@ class EventCard extends StatelessWidget {
                   Icon(Icons.people_alt_outlined,
                       size: 18, color: Colors.orange.shade700),
                   const SizedBox(width: 6),
-                  Text(
-                    "${event.maxParticipants} katılımcı",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                    ),
+                  FutureBuilder<List<GroupEventParticipantResponse>>(
+                    future: GroupEventParticipantService()
+                        .getParticipants(event.groupEventId, token),
+                    builder: (context, snapshot) {
+                      String display;
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        display = '...';
+                      } else if (snapshot.hasError) {
+                        debugPrint('getParticipants error: ${snapshot.error}');
+                        final err = snapshot.error.toString();
+                        if (err.contains('403') || err.toLowerCase().contains('forbidden')) {
+                          display = 'Giriş gerekli';
+                        } else {
+                          final count = snapshot.data?.length ?? 0;
+                          display = '$count';
+                        }
+                      } else {
+                        final count = snapshot.data?.length ?? 0;
+                        display = '$count';
+                      }
+                      return Text(
+                        "$display / ${event.maxParticipants} katılımcı",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

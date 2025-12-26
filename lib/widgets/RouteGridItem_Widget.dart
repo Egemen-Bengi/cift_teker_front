@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/responses/sharedRoute_response.dart';
 
-class LikedRouteGridItem extends StatelessWidget {
+class RouteGridItem extends StatelessWidget {
   final SharedRouteResponse route;
   final VoidCallback onTap;
 
-  const LikedRouteGridItem({
-    super.key,
-    required this.route,
-    required this.onTap,
-  });
+  const RouteGridItem({super.key, required this.route, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

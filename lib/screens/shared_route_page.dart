@@ -44,10 +44,16 @@ class _SharedRoutePageState extends State<SharedRoutePage>
     if (token == null) return;
 
     final allRoutes = await _sharedRouteService.getAllSharedRoutes(token);
+    if (!mounted) return;
+
     final myRoutes = await _sharedRouteService.getSharedRoutes(token);
+    if (!mounted) return;
 
     final likes = await _likeService.getMyLikes(token);
+    if (!mounted) return;
+
     final records = await _recordService.getMyRecords(token);
+    if (!mounted) return;
 
     _myLikes = {for (var like in likes.data) like.sharedRouteId: like};
     _myRecords = {
@@ -66,9 +72,13 @@ class _SharedRoutePageState extends State<SharedRoutePage>
     );
 
     _futureMySharedRoutes = Future.value(
-      ApiResponse(data: myRoutes.data, message: "Benim paylaşımlarım"),
+      ApiResponse(
+        data: myRoutes.data,
+        message: "Benim paylaşımlarım",
+      ),
     );
 
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -101,9 +111,17 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_futureAllSharedRoutes == null || _futureMySharedRoutes == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(

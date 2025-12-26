@@ -1,11 +1,12 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/enum/DetailEntrySource.dart';
 import 'package:cift_teker_front/models/responses/like_response.dart';
 import 'package:cift_teker_front/models/responses/sharedRoute_response.dart';
 import 'package:cift_teker_front/screens/shared_route_detail_page.dart';
 import 'package:cift_teker_front/services/like_service.dart';
 import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
-import 'package:cift_teker_front/widgets/LikedRouteGridItem_Widget.dart';
+import 'package:cift_teker_front/widgets/RouteGridItem_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -94,17 +95,23 @@ class _LikePageState extends State<LikePage> {
             itemBuilder: (context, index) {
               final route = routes[index];
 
-              return LikedRouteGridItem(
+              return RouteGridItem(
                 route: route,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final bool? changed = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => SharedRouteDetailPage(
                         sharedRouteId: route.sharedRouteId,
+                        entrySource: DetailEntrySource.liked,
                       ),
                     ),
                   );
+                  if (changed == true) {
+                    setState(() {
+                      _futureLikedRoutes = _loadLikedRoutes();
+                    });
+                  }
                 },
               );
             },
