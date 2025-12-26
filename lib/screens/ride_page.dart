@@ -82,7 +82,8 @@ class _RidePageState extends State<RidePage> {
         return;
       }
       if (permission == LocationPermission.deniedForever) {
-        if (mounted) _show("Konum izni kalıcı olarak reddedildi. Ayarlardan izin verin.");
+        if (mounted)
+          _show("Konum izni kalıcı olarak reddedildi. Ayarlardan izin verin.");
         return;
       }
 
@@ -131,14 +132,12 @@ class _RidePageState extends State<RidePage> {
 
       stompClient = StompClient(
         config: StompConfig.sockJS(
-          url:
-              'https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ws',
+          url: 'https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ws',
           stompConnectHeaders: {'Authorization': 'Bearer $token'},
           webSocketConnectHeaders: {'Authorization': 'Bearer $token'},
           onConnect: _onStompConnect,
           onWebSocketError: (err) => debugPrint("WebSocket Hata: $err"),
-          onStompError: (frame) =>
-              debugPrint("STOMP Hata: ${frame.body}"),
+          onStompError: (frame) => debugPrint("STOMP Hata: ${frame.body}"),
         ),
       );
 
@@ -169,8 +168,7 @@ class _RidePageState extends State<RidePage> {
       setState(() {});
 
       if (mapController != null && mounted) {
-        mapController!
-            .animateCamera(CameraUpdate.newLatLng(point));
+        mapController!.animateCamera(CameraUpdate.newLatLng(point));
       }
 
       stompClient?.send(
@@ -198,32 +196,49 @@ class _RidePageState extends State<RidePage> {
       return;
     }
 
+    final filteredPoints = <LatLng>[];
+    for (int i = 0; i < ridePoints.length; i += 10) {
+      filteredPoints.add(ridePoints[i]);
+    }
+
+    if (ridePoints.isNotEmpty &&
+        (filteredPoints.isEmpty || ridePoints.last != filteredPoints.last)) {
+      filteredPoints.add(ridePoints.last);
+    }
+
     final mapData = jsonEncode(
-      ridePoints
+      filteredPoints
           .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
           .toList(),
     );
 
+    debugPrint(
+      'MapData size: ${mapData.length} bytes, Points: ${ridePoints.length} -> ${filteredPoints.length}',
+    );
+
     final double distanceKm = calculateDistanceKm(ridePoints);
     final int durationSeconds = ridePoints.length * 5;
-    final double averageSpeedKmh =
-        calculateAverageSpeed(distanceKm, durationSeconds);
+    final double averageSpeedKmh = calculateAverageSpeed(
+      distanceKm,
+      durationSeconds,
+    );
 
     final RideHistoryRequest req = RideHistoryRequest(
       mapData: mapData,
       distanceKm: distanceKm,
       durationSeconds: durationSeconds,
       averageSpeedKmh: averageSpeedKmh,
-      startDateTime:
-          DateTime.now().subtract(Duration(seconds: durationSeconds)),
+      startDateTime: DateTime.now().subtract(
+        Duration(seconds: durationSeconds),
+      ),
       endDateTime: DateTime.now(),
     );
 
     try {
-      await rideService.saveRideHistory(req, token!);
-
       stompClient?.deactivate();
       stompClient = null;
+
+      await rideService.saveRideHistory(req, token!);
 
       if (!mounted) return;
       setState(() {
@@ -233,6 +248,7 @@ class _RidePageState extends State<RidePage> {
 
       _show("Sürüş kaydedildi.");
     } catch (e) {
+      debugPrint('stopRide error: $e');
       _show("Hata: $e");
     }
   }
@@ -257,8 +273,9 @@ class _RidePageState extends State<RidePage> {
 
   void _show(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -307,8 +324,7 @@ class _RidePageState extends State<RidePage> {
                         ? null
                         : (rideId == null ? _startRide : _stopRide),
                     style: ElevatedButton.styleFrom(
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -317,8 +333,8 @@ class _RidePageState extends State<RidePage> {
                       !isPageReady
                           ? "Yükleniyor..."
                           : (rideId == null
-                              ? "Bireysel Sürüşü Başlat"
-                              : "Sürüşü Bitir"),
+                                ? "Bireysel Sürüşü Başlat"
+                                : "Sürüşü Bitir"),
                       style: const TextStyle(fontSize: 18),
                     ),
                   ),

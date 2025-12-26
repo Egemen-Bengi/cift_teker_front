@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.evst.cift_teker_front"
-        minSdkVersion(23)
+        minSdkVersion(24)
         targetSdkVersion(34)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
