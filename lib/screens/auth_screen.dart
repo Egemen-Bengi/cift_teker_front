@@ -80,7 +80,6 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-    // Loading dialog göster
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -104,7 +103,7 @@ class _AuthPageState extends State<AuthPage> {
       final response = await userService.saveUser(request, "USER");
 
       if (!mounted) return;
-      Navigator.pop(context); // Loading dialog kapat
+      Navigator.pop(context);
 
       if (response.message == "Register successful") {
         if (!mounted) return;
@@ -188,6 +187,7 @@ class _AuthPageState extends State<AuthPage> {
       final token = resp.token;
       if (token != null && token.isNotEmpty) {
         await storage.write(key: "auth_token", value: token);
+
       } else {
         throw Exception("Token boş, login başarısız");
       }
