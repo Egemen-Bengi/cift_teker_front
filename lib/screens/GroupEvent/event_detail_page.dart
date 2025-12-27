@@ -1,4 +1,5 @@
 import 'package:cift_teker_front/screens/GroupEvent/participant_page.dart';
+import 'package:cift_teker_front/screens/GroupEvent/editEvent_page.dart';
 import 'package:cift_teker_front/screens/ride_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -27,10 +28,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
   bool _isOwner = false;
   bool _userLoaded = false;
 
+  late GroupEventResponse _currentEvent;
+
   @override
   void initState() {
     super.initState();
-    _isJoined = widget.event.isJoined;
+    _currentEvent = widget.event;
+    _isJoined = _currentEvent.isJoined;
     _loadCurrentUser();
   }
 
@@ -53,7 +57,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       final int currentUserId = decoded["userId"];
 
       setState(() {
-        _isOwner = currentUserId == widget.event.userId;
+        _isOwner = currentUserId == _currentEvent.userId;
         if (_isOwner) {
           _isJoined = false;
         }
@@ -79,7 +83,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _participantService.joinEvent(widget.event.groupEventId, token);
+      await _participantService.joinEvent(_currentEvent.groupEventId, token);
       setState(() => _isJoined = true);
 
       _showAlertDialog("Başarılı", "Etkinliğe katıldınız.");
@@ -98,7 +102,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _participantService.leaveEvent(widget.event.groupEventId, token);
+      await _participantService.leaveEvent(_currentEvent.groupEventId, token);
       setState(() => _isJoined = false);
 
       _showAlertDialog("Başarılı", "Etkinlikten ayrıldınız.");
@@ -139,7 +143,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       await _eventService.deleteGroupEvent(
-        widget.event.groupEventId,
+        _currentEvent.groupEventId,
         token,
       );
       _showAlertDialog("Başarılı", "Etkinlik silindi.");
@@ -156,7 +160,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context,
       MaterialPageRoute(
         builder: (_) =>
-            ParticipantPage(groupEventId: widget.event.groupEventId),
+              ParticipantPage(groupEventId: _currentEvent.groupEventId),
       ),
     );
   }
@@ -165,7 +169,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RidePage(groupEventId: widget.event.groupEventId),
+        builder: (_) => RidePage(groupEventId: _currentEvent.groupEventId),
       ),
     );
   }
@@ -180,7 +184,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.event.title),
+      title: Text(_currentEvent.title),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -231,6 +235,29 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   ),
 
                   if (_isOwner) ...[
+                    const SizedBox(height: 16),
+                    _buildActionButton(
+                      text: "Etkinliği Düzenle",
+                      icon: Icons.edit_outlined,
+                      color: Colors.indigo,
+                      isEnabled: true,
+                      onTap: () async {
+                        final result = await Navigator.push<GroupEventResponse?>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditEventPage(event: _currentEvent),
+                          ),
+                        );
+
+                        if (result != null) {
+                          setState(() {
+                            _currentEvent = result;
+                            _isJoined = _currentEvent.isJoined;
+                          });
+                          _showAlertDialog("Başarılı", "Etkinlik güncellendi.");
+                        }
+                      },
+                    ),
                     const SizedBox(height: 16),
                     _buildActionButton(
                       text: "Etkinliği Sil",

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../models/requests/groupEvent_request.dart';
 import '../models/responses/groupEvent_response.dart';
 import '../../core/models/api_response.dart';
+import '../models/requests/updateGroupEvent_request.dart';
 
 class EventService {
   final Dio _dio = Dio(
@@ -66,6 +67,20 @@ class EventService {
           "Authorization": "Bearer $token",
         },
       ),
+    );
+  }
+
+  // Grup etkinliği güncelleme
+  Future<ApiResponse<GroupEventResponse>> updateGroupEvent(int groupEventId, UpdateGroupEventRequest request, String token) async {
+    final response = await _dio.put(
+      "/event/group/update/$groupEventId",
+      data: request.toJson(),
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return ApiResponse.fromJson(
+      response.data,
+      (json) => GroupEventResponse.fromJson(json as Map<String, dynamic>),
     );
   }
 }
