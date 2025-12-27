@@ -18,13 +18,12 @@ class EventDetailPage extends StatefulWidget {
 }
 
 class _EventDetailPageState extends State<EventDetailPage> {
-  final GroupEventParticipantService _participantService =
-      GroupEventParticipantService();
-  final EventService _eventService = EventService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final _participantService = GroupEventParticipantService();
+  final _eventService = EventService();
+  final _storage = const FlutterSecureStorage();
 
   bool _isLoading = false;
-  late bool _isJoined;
+  bool _isJoined = false;
   bool _isOwner = false;
   bool _userLoaded = false;
 
@@ -32,46 +31,47 @@ class _EventDetailPageState extends State<EventDetailPage> {
   void initState() {
     super.initState();
     _isJoined = widget.event.isJoined;
-    _loadCurrentUserId();
+    _loadCurrentUser();
   }
 
-  Future<void> _loadCurrentUserId() async {
-    try {
-      final token = await _storage.read(key: "auth_token");
-
-      if (token == null) {
-        setState(() {
-          _isOwner = false;
-          _userLoaded = true;
-        });
-        return;
-      }
-
-      final decodedToken = JwtDecoder.decode(token);
-
-      final String currentUsername = decodedToken["sub"];
-
-      setState(() {
-        _isOwner = currentUsername == widget.event.username;
-
-        if (_isOwner) {
-          _isJoined = false;
-        }
-
-        _userLoaded = true;
-      });
-    } catch (_) {
-      setState(() {
-        _isOwner = false;
-        _userLoaded = true;
-      });
-    }
-  }
-
+  /// 🔐 Token oku
   Future<String?> _getToken() async {
     return await _storage.read(key: "auth_token");
   }
 
+  /// 👤 Token içinden userId al ve owner kontrolü yap
+  Future<void> _loadCurrentUser() async {
+    try {
+      final token = await _getToken();
+
+      if (token == null) {
+        _finishUserLoad(false);
+        return;
+      }
+
+      final decoded = JwtDecoder.decode(token);
+      final int currentUserId = decoded["userId"];
+
+      setState(() {
+        _isOwner = currentUserId == widget.event.userId;
+        if (_isOwner) {
+          _isJoined = false;
+        }
+        _userLoaded = true;
+      });
+    } catch (e) {
+      _finishUserLoad(false);
+    }
+  }
+
+  void _finishUserLoad(bool isOwner) {
+    setState(() {
+      _isOwner = isOwner;
+      _userLoaded = true;
+    });
+  }
+
+  /// ➕ Etkinliğe katıl
   Future<void> _joinEvent() async {
     final token = await _getToken();
     if (token == null) return;
@@ -80,19 +80,17 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       await _participantService.joinEvent(widget.event.groupEventId, token);
-
       setState(() => _isJoined = true);
 
-      if (!mounted) return;
-      _showAlertDialog("Başarılı", "Etkinliğe katıldınız");
+      _showAlertDialog("Başarılı", "Etkinliğe katıldınız.");
     } catch (_) {
-      if (!mounted) return;
       _showAlertDialog("Hata", "Etkinliğe katılırken bir hata oluştu.");
     }
 
     setState(() => _isLoading = false);
   }
 
+  /// ➖ Etkinlikten ayrıl
   Future<void> _leaveEvent() async {
     final token = await _getToken();
     if (token == null) return;
@@ -101,19 +99,17 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       await _participantService.leaveEvent(widget.event.groupEventId, token);
-
       setState(() => _isJoined = false);
 
-      if (!mounted) return;
       _showAlertDialog("Başarılı", "Etkinlikten ayrıldınız.");
     } catch (_) {
-      if (!mounted) return;
       _showAlertDialog("Hata", "Etkinlikten ayrılırken bir hata oluştu.");
     }
 
     setState(() => _isLoading = false);
   }
 
+  /// 🗑️ Etkinliği sil
   Future<void> _deleteEvent() async {
     final token = await _getToken();
     if (token == null) return;
@@ -142,12 +138,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _eventService.deleteGroupEvent(widget.event.groupEventId, token);
-
-      if (!mounted) return;
+      await _eventService.deleteGroupEvent(
+        widget.event.groupEventId,
+        token,
+      );
       _showAlertDialog("Başarılı", "Etkinlik silindi.");
-    } catch (_) {
-      if (!mounted) return;
+    } catch (e) {
+      print(e);
       _showAlertDialog("Hata", "Etkinlik silinirken bir hata oluştu.");
     }
 
@@ -168,7 +165,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RidePage(groupEventId: widget.event.groupEventId),
+        builder: (_) => RidePage(groupEventId: widget.event.groupEventId),
       ),
     );
   }
@@ -176,7 +173,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (!_userLoaded) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
@@ -193,9 +192,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(20),
-              color: Colors.white,
               child: Column(
                 children: [
                   _buildActionButton(
@@ -287,7 +284,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   BoxShadow(
                     color: effectiveColor.withOpacity(0.3),
                     blurRadius: 10,
-                    spreadRadius: 1,
                     offset: const Offset(0, 4),
                   ),
                 ]
@@ -296,13 +292,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 22),
+            Icon(icon, color: Colors.white),
             const SizedBox(width: 10),
             Text(
               text,
               style: const TextStyle(
-                fontSize: 17,
                 color: Colors.white,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
               ),
             ),
