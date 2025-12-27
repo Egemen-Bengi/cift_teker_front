@@ -42,17 +42,28 @@ class EventService {
   }
 
   Future<ApiResponse<List<GroupEventResponse>>> getAllGroupEvents(
-    String token) async {
-  final response = await _dio.get(
-    "/event/all",
-    options: Options(headers: {"Authorization": "Bearer $token"}),
-  );
+      String token) async {
+    final response = await _dio.get(
+      "/event/all",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
 
-  return ApiResponse.fromJson(
-    response.data,
-    (jsonList) => (jsonList as List)
-        .map((e) => GroupEventResponse.fromJson(e as Map<String, dynamic>))
-        .toList(),
-  );
-}
+    return ApiResponse.fromJson(
+      response.data,
+      (jsonList) => (jsonList as List)
+          .map((e) => GroupEventResponse.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<void> deleteGroupEvent(int groupEventId, String token) async {
+    await _dio.delete(
+      "/event/group/$groupEventId",
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+        },
+      ),
+    );
+  }
 }
