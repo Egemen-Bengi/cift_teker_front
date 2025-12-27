@@ -41,7 +41,7 @@ class EventCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// USERNAME + MENU ICON
+              /// USERNAME
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -68,7 +68,6 @@ class EventCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.more_vert, color: Colors.grey[700]),
                 ],
               ),
 

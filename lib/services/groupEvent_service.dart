@@ -41,6 +41,7 @@ class EventService {
     );
   }
 
+  // Tüm grup etkinliklerini listeleme
   Future<ApiResponse<List<GroupEventResponse>>> getAllGroupEvents(
       String token) async {
     final response = await _dio.get(
@@ -56,6 +57,7 @@ class EventService {
     );
   }
 
+  // Grup etkinliği silme
   Future<void> deleteGroupEvent(int groupEventId, String token) async {
     await _dio.delete(
       "/event/group/$groupEventId",

@@ -1,3 +1,5 @@
+import 'package:cift_teker_front/models/requests/updateEmail_request.dart';
+import 'package:cift_teker_front/models/requests/updatePhoneNumber_request.dart';
 import 'package:cift_teker_front/models/responses/updateUsername_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -54,12 +56,17 @@ class UserService {
 
       final apiResponse = ApiResponse.fromJson(
         response.data,
-        (json) => UpdateUsernameResponse.fromJson(json),
+        (json) => json != null
+            ? UpdateUsernameResponse.fromJson(json as Map<String, dynamic>)
+            : null,
       );
 
-      if (apiResponse.data.token != null) {
-        const storage = FlutterSecureStorage();
-        await storage.write(key: "auth_token", value: apiResponse.data.token);
+      if (apiResponse.data != null) {
+        final token = apiResponse.data!.token;
+        if (token.isNotEmpty) {
+          const storage = FlutterSecureStorage();
+          await storage.write(key: "auth_token", value: token);
+        }
       }
 
       return apiResponse;
@@ -98,7 +105,58 @@ class UserService {
       }
     }
   }
-  // buraya email güncelleme fonksiyonu eklenecek \\
+
+  // email guncelleme
+  Future<ApiResponse<UserResponse>> updateEmail(
+    UpdateEmailRequest email,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/updateEmail',
+        data: email.toJson(),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          "API Error: ${e.response?.statusCode} - ${e.response?.data}",
+        );
+      } else {
+        throw Exception("Bağlantı hatası: ${e.message}");
+      }
+    }
+  }
+  
+  // telefon numarası guncelleme
+  Future<ApiResponse<UserResponse>> updatePhoneNumber(
+    UpdatePhoneNumberRequest phoneNumber,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/updatePhoneNumber',
+        data: phoneNumber.toJson(),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => UserResponse.fromJson(json as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          "API Error: ${e.response?.statusCode} - ${e.response?.data}",
+        );
+      } else {
+        throw Exception("Bağlantı hatası: ${e.message}");
+      }
+    }
+  }
 
   // giriş yapmış kullanıcının bilgilerini getirme
   Future<ApiResponse<UserResponse>> getMyInfo(String token) async {
