@@ -1,4 +1,5 @@
 import 'package:cift_teker_front/screens/GroupEvent/participant_page.dart';
+import 'package:cift_teker_front/screens/ride_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -67,8 +68,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
     }
   }
 
-
-
   Future<String?> _getToken() async {
     return await _storage.read(key: "auth_token");
   }
@@ -80,10 +79,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _participantService.joinEvent(
-        widget.event.groupEventId,
-        token,
-      );
+      await _participantService.joinEvent(widget.event.groupEventId, token);
 
       setState(() => _isJoined = true);
 
@@ -104,10 +100,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _participantService.leaveEvent(
-        widget.event.groupEventId,
-        token,
-      );
+      await _participantService.leaveEvent(widget.event.groupEventId, token);
 
       setState(() => _isJoined = false);
 
@@ -130,9 +123,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Etkinliği Sil"),
-        content: const Text(
-          "Bu etkinliği silmek istediğinizden emin misiniz?",
-        ),
+        content: const Text("Bu etkinliği silmek istediğinizden emin misiniz?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -140,10 +131,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "Sil",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("Sil", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -154,10 +142,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _eventService.deleteGroupEvent(
-        widget.event.groupEventId,
-        token,
-      );
+      await _eventService.deleteGroupEvent(widget.event.groupEventId, token);
 
       if (!mounted) return;
       _showAlertDialog("Başarılı", "Etkinlik silindi.");
@@ -173,9 +158,17 @@ class _EventDetailPageState extends State<EventDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ParticipantPage(
-          groupEventId: widget.event.groupEventId,
-        ),
+        builder: (_) =>
+            ParticipantPage(groupEventId: widget.event.groupEventId),
+      ),
+    );
+  }
+
+  void _navigateToGroupRide() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RidePage(groupEventId: widget.event.groupEventId),
       ),
     );
   }
@@ -183,9 +176,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (!_userLoaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -193,6 +184,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
         title: Text(widget.event.title),
         centerTitle: true,
         backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -217,6 +213,15 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     color: Colors.red,
                     isEnabled: !_isOwner && _isJoined,
                     onTap: _leaveEvent,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildActionButton(
+                    text: "Grup Sürüşüne Katıl",
+                    icon: Icons.directions_bike,
+                    color: Colors.purple,
+                    isEnabled: _isJoined || _isOwner,
+                    onTap: _navigateToGroupRide,
                   ),
                   const SizedBox(height: 16),
 

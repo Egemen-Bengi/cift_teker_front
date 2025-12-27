@@ -7,8 +7,8 @@ class RideHistoryService {
     BaseOptions(
       baseUrl:
           "https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ride-history",
-      connectTimeout: Duration(seconds: 5),
-      receiveTimeout: Duration(seconds: 5),
+      connectTimeout: Duration(seconds: 10),
+      receiveTimeout: Duration(seconds: 10),
     ),
   );
 
@@ -65,15 +65,23 @@ class RideHistoryService {
   }
 
   //bireysel sürüş başlatma
-  Future<int> startRide(String token) async {
+  Future<int?> startRide(String token, {int? groupEventId}) async {
     try {
       final response = await _dio.post(
         "/start",
+        queryParameters: groupEventId != null
+            ? {"groupEventId": groupEventId}
+            : {},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       // Backend ResponseMessage<Long> döndüğü için object alanını alıyoruz
-      return response.data["object"] as int;
+      if (response.data is Map && response.data.containsKey("object")) {
+        final rideId = response.data["object"];
+        return rideId is int ? rideId : int.tryParse(rideId.toString());
+      }
+
+      return null;
     } on DioException catch (e) {
       throw _handleError(e);
     }
