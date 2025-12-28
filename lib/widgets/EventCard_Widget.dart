@@ -11,12 +11,7 @@ class EventCard extends StatelessWidget {
 
   final VoidCallback? onUpdated;
 
-  const EventCard({
-    super.key,
-    required this.event,
-    this.token,
-    this.onUpdated, 
-  });
+  const EventCard({super.key, required this.event, this.token, this.onUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +22,7 @@ class EventCard extends StatelessWidget {
       onTap: () async {
         final updatedEvent = await Navigator.push<GroupEventResponse>(
           context,
-          MaterialPageRoute(
-            builder: (_) => EventDetailPage(event: event),
-          ),
+          MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
         );
 
         if (updatedEvent != null && onUpdated != null) {
@@ -69,8 +62,7 @@ class EventCard extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.person,
-                            size: 16, color: Colors.white),
+                        const Icon(Icons.person, size: 16, color: Colors.white),
                         const SizedBox(width: 6),
                         Text(
                           event.username,
@@ -103,16 +95,16 @@ class EventCard extends StatelessWidget {
               /// DATE RANGE
               Row(
                 children: [
-                  Icon(Icons.calendar_today,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       "$start — $end",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
                   ),
                 ],
@@ -123,8 +115,11 @@ class EventCard extends StatelessWidget {
               /// LOCATION
               Row(
                 children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -145,10 +140,7 @@ class EventCard extends StatelessWidget {
               if (event.description != null)
                 Text(
                   event.description!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[800],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[800]),
                 ),
 
               const SizedBox(height: 12),
@@ -156,36 +148,15 @@ class EventCard extends StatelessWidget {
               /// PARTICIPANTS (SENİN KODUN – DEĞİŞMEDİ)
               Row(
                 children: [
-                  Icon(Icons.people_alt_outlined,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.people_alt_outlined,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
-                  FutureBuilder<List<GroupEventParticipantResponse>>(
-                    future: GroupEventParticipantService()
-                        .getParticipants(event.groupEventId, token),
-                    builder: (context, snapshot) {
-                      String display;
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        display = '...';
-                      } else if (snapshot.hasError) {
-                        final err = snapshot.error.toString();
-                        if (err.contains('403') ||
-                            err.toLowerCase().contains('forbidden')) {
-                          display = 'Giriş gerekli';
-                        } else {
-                          display = '${snapshot.data?.length ?? 0}';
-                        }
-                      } else {
-                        display = '${snapshot.data?.length ?? 0}';
-                      }
-                      return Text(
-                        "$display / ${event.maxParticipants} katılımcı",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                        ),
-                      );
-                    },
+                  Text(
+                    "${event.currentParticipants ?? 0} / ${event.maxParticipants} katılımcı",
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                 ],
               ),
