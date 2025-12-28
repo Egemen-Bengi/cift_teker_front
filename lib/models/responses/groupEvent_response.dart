@@ -4,7 +4,6 @@ class GroupEventResponse {
   final String? description;
   final DateTime startDateTime;
   final DateTime endDateTime;
-  final String status;
   final String startLocation;
   final String endLocation;
   final int maxParticipants;
@@ -19,7 +18,6 @@ class GroupEventResponse {
     this.description,
     required this.startDateTime,
     required this.endDateTime,
-    required this.status,
     required this.startLocation,
     required this.endLocation,
     required this.maxParticipants,
@@ -36,7 +34,6 @@ class GroupEventResponse {
       description: json["description"],
       startDateTime: DateTime.parse(json["startDateTime"]),
       endDateTime: DateTime.parse(json["endDateTime"]),
-      status: json["status"],
       startLocation: json["startLocation"],
       endLocation: json["endLocation"],
       maxParticipants: json["maxParticipants"],

@@ -13,7 +13,9 @@ class EventService {
 
   // Yeni grup etkinliği oluşturma
   Future<ApiResponse<GroupEventResponse>> createGroupEvent(
-      GroupEventRequest request, String token) async {
+    GroupEventRequest request,
+    String token,
+  ) async {
     final response = await _dio.post(
       "/event/group",
       data: request.toJson(),
@@ -28,7 +30,8 @@ class EventService {
 
   // Giriş yapmış kullanıcının grup etkinliklerini listeleme
   Future<ApiResponse<List<GroupEventResponse>>> getMyGroupEvents(
-      String token) async {
+    String token,
+  ) async {
     final response = await _dio.get(
       "/event/me",
       options: Options(headers: {"Authorization": "Bearer $token"}),
@@ -37,14 +40,17 @@ class EventService {
     return ApiResponse.fromJson(
       response.data,
       (jsonList) => (jsonList as List)
-          .map((json) => GroupEventResponse.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) => GroupEventResponse.fromJson(json as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
 
   // Tüm grup etkinliklerini listeleme
   Future<ApiResponse<List<GroupEventResponse>>> getAllGroupEvents(
-      String token) async {
+    String token,
+  ) async {
     final response = await _dio.get(
       "/event/all",
       options: Options(headers: {"Authorization": "Bearer $token"}),
@@ -61,17 +67,17 @@ class EventService {
   // Grup etkinliği silme
   Future<void> deleteGroupEvent(int groupEventId, String token) async {
     await _dio.delete(
-      "/event/group/$groupEventId",
-      options: Options(
-        headers: {
-          "Authorization": "Bearer $token",
-        },
-      ),
+      "/event/group/delete/$groupEventId",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
     );
   }
 
   // Grup etkinliği güncelleme
-  Future<ApiResponse<GroupEventResponse>> updateGroupEvent(int groupEventId, UpdateGroupEventRequest request, String token) async {
+  Future<ApiResponse<GroupEventResponse>> updateGroupEvent(
+    int groupEventId,
+    UpdateGroupEventRequest request,
+    String token,
+  ) async {
     final response = await _dio.put(
       "/event/group/update/$groupEventId",
       data: request.toJson(),
