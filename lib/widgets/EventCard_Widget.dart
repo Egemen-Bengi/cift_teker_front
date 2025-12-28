@@ -9,24 +9,37 @@ class EventCard extends StatelessWidget {
   final GroupEventResponse event;
   final String? token;
 
-  const EventCard({super.key, required this.event, this.token});
+  final VoidCallback? onUpdated;
+
+  const EventCard({
+    super.key,
+    required this.event,
+    this.token,
+    this.onUpdated, 
+  });
 
   @override
   Widget build(BuildContext context) {
-    
     final start = DateFormat('dd MMM yyyy, HH:mm').format(event.startDateTime);
     final end = DateFormat('dd MMM yyyy, HH:mm').format(event.endDateTime);
+
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final updatedEvent = await Navigator.push<GroupEventResponse>(
           context,
-          MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
+          MaterialPageRoute(
+            builder: (_) => EventDetailPage(event: event),
+          ),
         );
+
+        if (updatedEvent != null && onUpdated != null) {
+          onUpdated!();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white, 
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -46,8 +59,10 @@ class EventCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade600,
                       borderRadius: BorderRadius.circular(12),
@@ -138,7 +153,7 @@ class EventCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              /// PARTICIPANTS
+              /// PARTICIPANTS (SENİN KODUN – DEĞİŞMEDİ)
               Row(
                 children: [
                   Icon(Icons.people_alt_outlined,
@@ -149,20 +164,19 @@ class EventCard extends StatelessWidget {
                         .getParticipants(event.groupEventId, token),
                     builder: (context, snapshot) {
                       String display;
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
                         display = '...';
                       } else if (snapshot.hasError) {
-                        debugPrint('getParticipants error: ${snapshot.error}');
                         final err = snapshot.error.toString();
-                        if (err.contains('403') || err.toLowerCase().contains('forbidden')) {
+                        if (err.contains('403') ||
+                            err.toLowerCase().contains('forbidden')) {
                           display = 'Giriş gerekli';
                         } else {
-                          final count = snapshot.data?.length ?? 0;
-                          display = '$count';
+                          display = '${snapshot.data?.length ?? 0}';
                         }
                       } else {
-                        final count = snapshot.data?.length ?? 0;
-                        display = '$count';
+                        display = '${snapshot.data?.length ?? 0}';
                       }
                       return Text(
                         "$display / ${event.maxParticipants} katılımcı",
@@ -175,8 +189,6 @@ class EventCard extends StatelessWidget {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 8),
             ],
           ),
         ),

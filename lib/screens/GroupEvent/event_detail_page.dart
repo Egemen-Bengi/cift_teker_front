@@ -146,7 +146,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
         _currentEvent.groupEventId,
         token,
       );
-      _showAlertDialog("Başarılı", "Etkinlik silindi.");
+      if (mounted) Navigator.pop(context, _currentEvent);
+      return;
     } catch (e) {
       print(e);
       _showAlertDialog("Hata", "Etkinlik silinirken bir hata oluştu.");
@@ -182,7 +183,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
       );
     }
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        if (mounted) Navigator.pop(context, _currentEvent);
+        return false;
+      },
+      child: Scaffold(
       appBar: AppBar(
       title: Text(_currentEvent.title),
         centerTitle: true,
@@ -190,7 +196,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _currentEvent),
         ),
       ),
       body: _isLoading
@@ -270,6 +276,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 ],
               ),
             ),
+      ),
     );
   }
 

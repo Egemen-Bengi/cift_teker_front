@@ -78,7 +78,7 @@ class EventService {
     UpdateGroupEventRequest request,
     String token,
   ) async {
-    final response = await _dio.put(
+    final response = await _dio.patch(
       "/event/group/update/$groupEventId",
       data: request.toJson(),
       options: Options(headers: {"Authorization": "Bearer $token"}),

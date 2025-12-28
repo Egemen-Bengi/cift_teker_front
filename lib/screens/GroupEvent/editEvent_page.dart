@@ -148,7 +148,6 @@ class _EditEventPageState extends State<EditEventPage> {
         token,
       );
       if (resp != null && resp.data != null) {
-        _showAlert("Başarılı", "Etkinlik güncellendi.");
         Navigator.pop(context, resp.data);
       } else {
         _showAlert("Hata", "Güncelleme başarısız: ${resp?.message}");
