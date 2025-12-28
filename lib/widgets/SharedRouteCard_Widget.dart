@@ -1,3 +1,4 @@
+import 'package:cift_teker_front/components/UserChip.dart';
 import 'package:cift_teker_front/models/responses/comment_response.dart';
 import 'package:cift_teker_front/models/responses/like_response.dart';
 import 'package:cift_teker_front/models/responses/record_response.dart';
@@ -397,7 +398,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _UserChip(username: widget.sharedRoute.username),
+                UserChip(username: widget.sharedRoute.username),
                 Icon(Icons.more_vert, color: Colors.grey[700]),
               ],
             ),
@@ -579,36 +580,6 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _UserChip extends StatelessWidget {
-  final String username;
-  const _UserChip({required this.username});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade600,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.person, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            username,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

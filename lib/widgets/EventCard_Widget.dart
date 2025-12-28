@@ -1,9 +1,8 @@
+import 'package:cift_teker_front/components/UserChip.dart';
 import 'package:cift_teker_front/screens/GroupEvent/event_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/responses/groupEvent_response.dart';
-import '../models/responses/groupEventParticipant_response.dart';
-import '../services/groupEventParticipant_service.dart';
 
 class EventCard extends StatelessWidget {
   final GroupEventResponse event;
@@ -51,33 +50,10 @@ class EventCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade600,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person, size: 16, color: Colors.white),
-                        const SizedBox(width: 6),
-                        Text(
-                          event.username,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  UserChip(username: event.username),
+                  Icon(Icons.more_vert, color: Colors.grey[700]),
                 ],
               ),
-
               const SizedBox(height: 14),
 
               /// TITLE
