@@ -7,6 +7,7 @@ import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class CommentPage extends StatefulWidget {
   const CommentPage({super.key});
@@ -22,10 +23,26 @@ class _CommentPageState extends State<CommentPage> {
 
   late Future<List<SharedRouteResponse>> _futureCommentedRoutes;
 
+  int? _currentUserId;
+
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
+
     _futureCommentedRoutes = _loadCommentedRoutes();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
+
+    try {
+      final decoded = JwtDecoder.decode(token);
+      setState(() {
+        _currentUserId = decoded["userId"];
+      });
+    } catch (_) {}
   }
 
   Future<List<SharedRouteResponse>> _loadCommentedRoutes() async {
@@ -90,7 +107,10 @@ class _CommentPageState extends State<CommentPage> {
             padding: const EdgeInsets.all(16),
             itemCount: routes.length,
             itemBuilder: (context, index) {
-              return SharedRouteCard(sharedRoute: routes[index]);
+              return SharedRouteCard(
+                sharedRoute: routes[index],
+                isOwner: _currentUserId == routes[index].userId,
+              );
             },
           );
         },

@@ -7,6 +7,7 @@ import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class SharedRouteDetailPage extends StatefulWidget {
   final int sharedRouteId;
@@ -31,6 +32,8 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
   late Future<SharedRouteResponse> _futureRoute;
 
   bool _hasChanged = false;
+  bool _isOwner = false;
+  bool _userLoaded = false;
 
   @override
   void initState() {
@@ -38,24 +41,53 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
     _futureRoute = _loadRoute();
   }
 
+  Future<String?> _getToken() async {
+    return await _storage.read(key: "auth_token");
+  }
+
+  Future<void> _loadCurrentUser(SharedRouteResponse route) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _finishUserLoad(false);
+        return;
+      }
+
+      final decoded = JwtDecoder.decode(token);
+      final int currentUserId = decoded["userId"];
+
+      setState(() {
+        _isOwner = currentUserId == route.userId;
+        _userLoaded = true;
+      });
+    } catch (_) {
+      _finishUserLoad(false);
+    }
+  }
+
+  void _finishUserLoad(bool isOwner) {
+    setState(() {
+      _isOwner = isOwner;
+      _userLoaded = true;
+    });
+  }
+
   Future<SharedRouteResponse> _loadRoute() async {
     final token = await _storage.read(key: "auth_token");
-
-    if (token == null || token.isEmpty) {
-      throw Exception("Token bulunamadı");
-    }
+    if (token == null) throw Exception("Token yok");
 
     final route = await _sharedRouteService.getSharedRouteById(
       widget.sharedRouteId,
       token,
     );
+    await _loadCurrentUser(route);
+
     final likeApiResponse = await _likeService.getMyLikes(token);
-    final likes = likeApiResponse.data;
     try {
-      _currentLike = likes.firstWhere(
+      _currentLike = likeApiResponse.data.firstWhere(
         (l) => l.sharedRouteId == widget.sharedRouteId,
       );
-    } catch (e) {
+    } catch (_) {
       _currentLike = null;
     }
 
@@ -85,6 +117,7 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
                 sharedRoute: snapshot.data!,
                 myLike: _currentLike,
                 isDetail: true,
+                isOwner: _isOwner,
                 onChanged: () {
                   _hasChanged = true;
                 },

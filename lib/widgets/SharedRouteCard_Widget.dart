@@ -2,9 +2,11 @@ import 'package:cift_teker_front/components/UserChip.dart';
 import 'package:cift_teker_front/models/responses/comment_response.dart';
 import 'package:cift_teker_front/models/responses/like_response.dart';
 import 'package:cift_teker_front/models/responses/record_response.dart';
+import 'package:cift_teker_front/screens/editSharedRoute_page.dart';
 import 'package:cift_teker_front/services/comment_service.dart';
 import 'package:cift_teker_front/services/like_service.dart';
 import 'package:cift_teker_front/services/record_service.dart';
+import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,6 +18,7 @@ class SharedRouteCard extends StatefulWidget {
   final LikeResponse? myLike;
   final RecordResponse? myRecord;
   final bool isDetail;
+  final bool isOwner;
   final VoidCallback? onChanged;
 
   const SharedRouteCard({
@@ -24,6 +27,7 @@ class SharedRouteCard extends StatefulWidget {
     this.myLike,
     this.myRecord,
     this.isDetail = false,
+    required this.isOwner,
     this.onChanged,
   });
 
@@ -36,6 +40,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
   final LikeService _likeService = LikeService();
   final RecordService _recordService = RecordService();
   final CommentService _commentService = CommentService();
+  final SharedRouteService _sharedRouteService = SharedRouteService();
 
   List<CommentResponse> comments = [];
   bool isLoadingComments = false;
@@ -370,6 +375,58 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     return sorted;
   }
 
+  Future<void> _goToEditPage() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditSharedRoutePage(sharedRoute: widget.sharedRoute),
+      ),
+    );
+
+    if (result == true) {
+      widget.onChanged?.call();
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final bool? approved = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Paylaşımı Sil"),
+        content: const Text(
+          "Bu paylaşımı silmek istediğine emin misin? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("İptal"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+
+    if (approved != true) return;
+
+    final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
+
+    await _sharedRouteService.deleteSharedRoute(
+      widget.sharedRoute.sharedRouteId,
+      token,
+    );
+
+    widget.onChanged?.call();
+
+    if (widget.isDetail && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final createdAt = DateFormat(
@@ -399,7 +456,24 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 UserChip(username: widget.sharedRoute.username),
-                Icon(Icons.more_vert, color: Colors.grey[700]),
+                if (widget.isOwner)
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: Colors.grey[700]),
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _goToEditPage();
+                      } else if (value == 'delete') {
+                        _confirmDelete();
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'edit', child: Text("Düzenle")),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text("Sil", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
               ],
             ),
 

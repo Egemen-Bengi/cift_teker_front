@@ -9,6 +9,7 @@ import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class SharedRoutePage extends StatefulWidget {
   const SharedRoutePage({super.key});
@@ -32,6 +33,8 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   Map<int, LikeResponse> _myLikes = {};
   Map<int, RecordResponse> _myRecords = {};
 
+  int? _currentUserId;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +45,9 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   Future<void> _loadEvents() async {
     final token = await _storage.read(key: "auth_token");
     if (token == null) return;
+
+    final decoded = JwtDecoder.decode(token);
+    _currentUserId = decoded["userId"];
 
     final allRoutes = await _sharedRouteService.getAllSharedRoutes(token);
     if (!mounted) return;
@@ -72,10 +78,7 @@ class _SharedRoutePageState extends State<SharedRoutePage>
     );
 
     _futureMySharedRoutes = Future.value(
-      ApiResponse(
-        data: myRoutes.data,
-        message: "Benim paylaşımlarım",
-      ),
+      ApiResponse(data: myRoutes.data, message: "Benim paylaşımlarım"),
     );
 
     if (!mounted) return;
@@ -99,10 +102,16 @@ class _SharedRoutePageState extends State<SharedRoutePage>
           itemCount: routes.length,
           itemBuilder: (_, index) {
             final route = routes[index];
+            final bool isOwner =
+                _currentUserId != null && route.userId == _currentUserId;
             return SharedRouteCard(
               sharedRoute: route,
               myLike: _myLikes[route.sharedRouteId],
               myRecord: _myRecords[route.sharedRouteId],
+              isOwner: isOwner,
+              onChanged: () {
+                _loadEvents();
+              },
             );
           },
         );
@@ -119,9 +128,7 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   @override
   Widget build(BuildContext context) {
     if (_futureAllSharedRoutes == null || _futureMySharedRoutes == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
