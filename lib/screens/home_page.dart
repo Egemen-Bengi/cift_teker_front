@@ -225,7 +225,11 @@ class _HomePageState extends State<HomePage>
         return ListView.builder(
           itemCount: events.length,
           itemBuilder: (context, index) {
-            return EventCard(event: events[index], token: _token);
+            return EventCard(
+              event: events[index],
+              token: _token,
+              onUpdated: () => _loadEvents(),
+            );
           },
         );
       },
