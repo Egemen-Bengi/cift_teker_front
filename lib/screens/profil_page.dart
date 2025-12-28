@@ -1,6 +1,8 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
 import 'package:cift_teker_front/models/requests/updateUsername_request.dart';
+import 'package:cift_teker_front/models/requests/updateEmail_request.dart';
+import 'package:cift_teker_front/models/requests/updatePhoneNumber_request.dart';
 import 'package:cift_teker_front/models/responses/user_response.dart';
 import 'package:cift_teker_front/screens/auth_screen.dart';
 import 'package:cift_teker_front/screens/main_navigation.dart';
@@ -218,8 +220,7 @@ class _ProfilePageState extends State<ProfilePage> {
               final token = await _storage.read(key: "auth_token");
 
               if (token == null) {
-                if (loadingDialogContext != null &&
-                    loadingDialogContext!.mounted) {
+                if (loadingDialogContext != null) {
                   Navigator.pop(loadingDialogContext!);
                 }
                 _showAlertDialog("Hata", "Token bulunamadı.");
@@ -239,8 +240,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 await _storage.delete(key: "auth_token");
 
-                if (loadingDialogContext != null &&
-                    loadingDialogContext!.mounted) {
+                if (loadingDialogContext != null) {
                   Navigator.pop(loadingDialogContext!);
                 }
 
@@ -256,8 +256,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   (Route<dynamic> route) => false,
                 );
               } catch (e) {
-                if (loadingDialogContext != null &&
-                    loadingDialogContext!.mounted) {
+                if (loadingDialogContext != null) {
                   Navigator.pop(loadingDialogContext!);
                 }
 
@@ -320,7 +319,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 return;
               }
 
-              /*try {
+              try {
                 final updateResponse = await _userService.updateEmail(
                   UpdateEmailRequest(newEmail: newEmail),
                   token,
@@ -353,7 +352,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   "Hata",
                   "Güncelleme sırasında hata: ${e.toString()}",
                 );
-              }*/
+              }
             },
             child: const Text("Güncelle"),
           ),
@@ -410,7 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 return;
               }
 
-              /*try {
+              try {
                 final updateResponse = await _userService.updatePhoneNumber(
                   UpdatePhoneNumberRequest(newPhoneNumber: newPhoneNumber),
                   token,
@@ -443,7 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   "Hata",
                   "Güncelleme sırasında hata: ${e.toString()}",
                 );
-              }*/
+              }
             },
             child: const Text("Güncelle"),
           ),
