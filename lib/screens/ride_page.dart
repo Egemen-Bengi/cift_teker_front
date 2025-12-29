@@ -11,10 +11,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 
 import '../models/requests/rideHistory_request.dart';
+import '../models/responses/groupEvent_response.dart';
 
 class RidePage extends StatefulWidget {
-  final int? groupEventId;
-  const RidePage({super.key, this.groupEventId});
+  final GroupEventResponse? groupEvent;
+  const RidePage({super.key, this.groupEvent});
 
   @override
   State<RidePage> createState() => _RidePageState();
@@ -37,6 +38,7 @@ class _RidePageState extends State<RidePage> {
   int? _rideId;
   int? _userId;
   bool _isGroupRide = false;
+  bool _isOwner = false;
   bool _isRideStarted = false;
   bool _isPageReady = false;
   bool _isConnecting = false;
@@ -46,30 +48,49 @@ class _RidePageState extends State<RidePage> {
   double _totalDistance = 0.0;
   double _currentSpeed = 0.0;
 
+  BitmapDescriptor? _participantIcon;
+
   @override
   void initState() {
     super.initState();
-    _isGroupRide = widget.groupEventId != null;
+    _isGroupRide = widget.groupEvent != null;
     _initializePage();
   }
 
   Future<void> _initializePage() async {
     await _getToken();
     await _getUserLocation();
-    await _getUserIdFromToken();
+    await _loadUserId();
+    await _loadMarkerIcons();
 
     if (!mounted) return;
     setState(() {
+      if (_isGroupRide && widget.groupEvent != null && _userId != null) {
+        _isOwner = _userId == widget.groupEvent!.userId;
+      }
       _isPageReady = true;
     });
   }
 
-  Future<void> _getUserIdFromToken() async {
-    final parts = _token!.split('.');
-    final payload = jsonDecode(
-      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+  Future<void> _loadMarkerIcons() async {
+    _participantIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      'assets/grupSurus.png',
     );
-    _userId = payload["id"];
+  }
+
+  Future<void> _loadUserId() async {
+    if (_token == null) return;
+    try {
+      final parts = _token!.split('.');
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      _userId = payload["userId"];
+    } catch (e) {
+      debugPrint("Error decoding token: $e");
+      _userId = null;
+    }
   }
 
   Future<void> _getToken() async {
@@ -119,6 +140,7 @@ class _RidePageState extends State<RidePage> {
       setState(() {
         _currentPosition = LatLng(pos.latitude, pos.longitude);
       });
+      _updateCurrentUserMarker();
     } catch (e) {
       debugPrint('getUserLocation error: $e');
       // fallback: son bilinen konumu dene
@@ -128,6 +150,7 @@ class _RidePageState extends State<RidePage> {
           setState(() {
             _currentPosition = LatLng(last.latitude, last.longitude);
           });
+          _updateCurrentUserMarker();
           return;
         }
       } catch (e2) {
@@ -151,7 +174,7 @@ class _RidePageState extends State<RidePage> {
     try {
       final int? rideId = await _rideService.startRide(
         _token!,
-        groupEventId: widget.groupEventId,
+        groupEventId: widget.groupEvent?.groupEventId,
       );
 
       if (rideId == null) {
@@ -160,7 +183,7 @@ class _RidePageState extends State<RidePage> {
         return;
       }
 
-      _isGroupRide = widget.groupEventId != null;
+      _isGroupRide = widget.groupEvent != null;
 
       setState(() {
         _rideId = rideId;
@@ -190,19 +213,53 @@ class _RidePageState extends State<RidePage> {
     }
   }
 
+  void _joinRide() {
+    if (widget.groupEvent?.activeRideId == null) {
+      _show("Sürüş ID'si bulunamadı. Katılım başarısız.");
+      return;
+    }
+
+    if (_token == null || _token!.isEmpty) {
+      _show("Token bulunamadı. Lütfen tekrar giriş yapın.");
+      return;
+    }
+
+    setState(() {
+      _rideId = widget.groupEvent!.activeRideId;
+      _isRideStarted = true;
+      _isConnecting = true; // To show loading while connecting to websocket
+    });
+
+    _stompClient = StompClient(
+      config: StompConfig.sockJS(
+        url: 'https://cift-teker-sosyal-bisiklet-uygulamasi.onrender.com/ws',
+        stompConnectHeaders: {'Authorization': 'Bearer $_token'},
+        webSocketConnectHeaders: {'Authorization': 'Bearer $_token'},
+        onConnect: _onStompConnect,
+        onWebSocketError: (err) => debugPrint("WebSocket Hata: $err"),
+        onStompError: (frame) => debugPrint("STOMP Hata: ${frame.body}"),
+      ),
+    );
+
+    _stompClient!.activate();
+    if (mounted) {
+      _show("Grup sürüşüne katıldınız!");
+    }
+  }
+
   void _onStompConnect(StompFrame frame) {
     debugPrint("STOMP Bağlantısı Başarılı");
 
     if (!mounted) return;
 
-    if (_isGroupRide && widget.groupEventId != null) {
+    if (_isGroupRide && widget.groupEvent != null) {
       _stompClient!.subscribe(
-        destination: '/topic/group/${widget.groupEventId}',
+        destination: '/topic/group/${widget.groupEvent!.groupEventId}',
         callback: (frame) {
           _handleLocationMessage(frame.body ?? "");
         },
       );
-      debugPrint("Subscribed to: /topic/group/${widget.groupEventId}");
+      debugPrint("Subscribed to: /topic/group/${widget.groupEvent!.groupEventId}");
     } else {
       if (_rideId != null) {
         _stompClient!.subscribe(
@@ -229,9 +286,12 @@ class _RidePageState extends State<RidePage> {
 
       if (!mounted) return;
 
+      // Kendi konumumuzu bu event'ten almayalım.
+      if (location.userId == _userId) return;
+
       setState(() {
         _participantLocations[location.userId] = location;
-        _updateMarkers();
+        _updateParticipantMarker(location);
       });
 
       debugPrint(
@@ -256,19 +316,16 @@ class _RidePageState extends State<RidePage> {
 
       setState(() {
         _currentPosition = currentPos;
+        _ridePoints.add(currentPos);
+        _totalDistance = _calculateDistanceKm(_ridePoints);
+        _currentSpeed = pos.speed * 3.6;
+        _elapsedSeconds += 5;
       });
-
-      _ridePoints.add(currentPos);
-      _totalDistance = _calculateDistanceKm(_ridePoints);
-
-      _currentSpeed = pos.speed * 3.6;
-      _elapsedSeconds += 5;
+      _updateCurrentUserMarker();
 
       if (_mapController != null && mounted) {
         _mapController!.animateCamera(CameraUpdate.newLatLng(currentPos));
       }
-
-      setState(() {});
 
       // Backend'ye konum gönder
       final String payload = jsonEncode({
@@ -313,134 +370,84 @@ class _RidePageState extends State<RidePage> {
       _stompClient?.deactivate();
       _stompClient = null;
 
-      if (_isGroupRide) {
-        if (_ridePoints.isEmpty) {
-          _show("Sürüş verisi bulunamadı");
-          return;
-        }
+      if (_ridePoints.isEmpty) {
+        _show("Sürüş verisi bulunamadı");
+        return;
+      }
 
-        final List<LatLng> filteredPoints = <LatLng>[];
-        for (int i = 0; i < _ridePoints.length; i += 10) {
-          filteredPoints.add(_ridePoints[i]);
-        }
+      // --- Ortak Mantık ---
+      final List<LatLng> filteredPoints = <LatLng>[];
+      for (int i = 0; i < _ridePoints.length; i += 10) {
+        filteredPoints.add(_ridePoints[i]);
+      }
+      if (_ridePoints.isNotEmpty &&
+          (filteredPoints.isEmpty || _ridePoints.last != filteredPoints.last)) {
+        filteredPoints.add(_ridePoints.last);
+      }
 
-        if (_ridePoints.isNotEmpty &&
-            (filteredPoints.isEmpty ||
-                _ridePoints.last != filteredPoints.last)) {
-          filteredPoints.add(_ridePoints.last);
-        }
+      final String mapData = jsonEncode(
+        filteredPoints
+            .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
+            .toList(),
+      );
 
-        final String mapData = jsonEncode(
-          filteredPoints
-              .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
-              .toList(),
-        );
+      debugPrint(
+        "MapData size: ${mapData.length} bytes, Points: ${_ridePoints.length} -> ${filteredPoints.length}",
+      );
 
-        debugPrint(
-          "MapData size: ${mapData.length} bytes, Points: ${_ridePoints.length} -> ${filteredPoints.length}",
-        );
+      final double averageSpeed = _calculateAverageSpeed(
+        _totalDistance,
+        _elapsedSeconds,
+      );
+      final DateTime rideEndDate = DateTime.now();
 
-        final double averageSpeed = _calculateAverageSpeed(
-          _totalDistance,
-          _elapsedSeconds,
-        );
+      // --- İstek Oluşturma ---
+      final RideHistoryRequest request = RideHistoryRequest(
+        mapData: mapData,
+        distanceKm: _totalDistance,
+        durationSeconds: _elapsedSeconds,
+        averageSpeedKmh: averageSpeed,
+        startDateTime: rideEndDate.subtract(
+          Duration(seconds: _elapsedSeconds),
+        ),
+        endDateTime: rideEndDate,
+        groupEventId: _isGroupRide ? widget.groupEvent?.groupEventId : null,
+      );
 
-        final RideHistoryRequest request = RideHistoryRequest(
-          mapData: mapData,
-          distanceKm: _totalDistance,
-          durationSeconds: _elapsedSeconds,
-          averageSpeedKmh: averageSpeed,
-          startDateTime: DateTime.now().subtract(
-            Duration(seconds: _elapsedSeconds),
-          ),
-          endDateTime: DateTime.now(),
-          groupEventId: widget.groupEventId,
-        );
+      // --- Kaydetme ---
+      await _rideService.saveRideHistory(request, _token!);
 
-        await _rideService.saveRideHistory(request, _token!);
-
-        if (!mounted) return;
-        setState(() {
+      // --- Arayüz Güncelleme ---
+      if (!mounted) return;
+      setState(() {
+        if (_isGroupRide) {
           _participantLocations.clear();
-          _updateMarkers();
-          _ridePoints.clear();
-          _rideId = null;
-          _isRideStarted = false;
-          _elapsedSeconds = 0;
-          _totalDistance = 0.0;
-          _currentSpeed = 0.0;
-        });
-        if (mounted) {
-          _show("Grup sürüşü tamamlandı");
+          _markers
+              .removeWhere((m) => m.markerId.value.startsWith('participant_'));
         }
-      } else {
-        if (_ridePoints.isEmpty) {
-          if (mounted) _show("Sürüş verisi bulunamadı");
-          setState(() => _isConnecting = false);
-          return;
-        }
+        _ridePoints.clear();
+        _rideId = null;
+        _isRideStarted = false;
+        _elapsedSeconds = 0;
+        _totalDistance = 0.0;
+        _currentSpeed = 0.0;
+      });
 
-        final List<LatLng> filteredPoints = <LatLng>[];
-        for (int i = 0; i < _ridePoints.length; i += 10) {
-          filteredPoints.add(_ridePoints[i]);
-        }
-
-        if (_ridePoints.isNotEmpty &&
-            (filteredPoints.isEmpty ||
-                _ridePoints.last != filteredPoints.last)) {
-          filteredPoints.add(_ridePoints.last);
-        }
-
-        final String mapData = jsonEncode(
-          filteredPoints
-              .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
-              .toList(),
+      if (mounted) {
+        _show(
+          _isGroupRide
+              ? "Grup sürüşü tamamlandı"
+              : "Sürüş kaydedildi - Mesafe: ${_totalDistance.toStringAsFixed(2)} km",
         );
-
-        debugPrint(
-          "MapData size: ${mapData.length} bytes, Points: ${_ridePoints.length} -> ${filteredPoints.length}",
-        );
-
-        final double averageSpeed = _calculateAverageSpeed(
-          _totalDistance,
-          _elapsedSeconds,
-        );
-
-        final RideHistoryRequest request = RideHistoryRequest(
-          mapData: mapData,
-          distanceKm: _totalDistance,
-          durationSeconds: _elapsedSeconds,
-          averageSpeedKmh: averageSpeed,
-          startDateTime: DateTime.now().subtract(
-            Duration(seconds: _elapsedSeconds),
-          ),
-          endDateTime: DateTime.now(),
-        );
-
-        await _rideService.saveRideHistory(request, _token!);
-
-        if (!mounted) return;
-        setState(() {
-          _ridePoints.clear();
-          _rideId = null;
-          _isRideStarted = false;
-          _elapsedSeconds = 0;
-          _totalDistance = 0.0;
-          _currentSpeed = 0.0;
-        });
-
-        if (mounted) {
-          _show(
-            "Sürüş kaydedildi - Mesafe: ${_totalDistance.toStringAsFixed(2)} km",
-          );
-        }
       }
     } catch (e) {
       debugPrint("Sürüş durdurma hatası: $e");
       if (mounted) _show("Hata: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isConnecting = false);
+      }
     }
-
-    setState(() => _isConnecting = false);
   }
 
   double _calculateDistanceKm(List<LatLng> points) {
@@ -463,34 +470,79 @@ class _RidePageState extends State<RidePage> {
     return km / (seconds / 3600);
   }
 
-  void _updateMarkers() {
-    _markers.clear();
+  String _formatDuration(int totalSeconds) {
+    final duration = Duration(seconds: totalSeconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
 
-    for (final entry in _participantLocations.entries) {
-      final location = entry.value;
-      _markers.add(
-        Marker(
-          markerId: MarkerId('participant_${location.userId}'),
-          position: location.location,
-          infoWindow: InfoWindow(
-            title: location.username,
-            snippet: 'Hız: ${location.speed.toStringAsFixed(1)} km/h',
+    final minutesString = minutes.toString().padLeft(2, '0');
+    final secondsString = seconds.toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      final hoursString = hours.toString().padLeft(2, '0');
+      return '$hoursString:$minutesString:$secondsString';
+    } else {
+      return '$minutesString:$secondsString';
+    }
+  }
+
+  Widget _buildStatColumn(String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         ),
-      );
-    }
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
 
-    if (_currentPosition != null) {
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('current_user'),
-          position: _currentPosition!,
-          infoWindow: const InfoWindow(title: 'Benim Konumum'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      );
-    }
+  void _updateParticipantMarker(ParticipantLocation location) {
+    final markerId = MarkerId('participant_${location.userId}');
+    final marker = Marker(
+      markerId: markerId,
+      position: location.location,
+      infoWindow: InfoWindow(
+        title: location.username,
+        snippet: 'Hız: ${location.speed.toStringAsFixed(1)} km/h',
+      ),
+      icon: _participantIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+    );
+    setState(() {
+      _markers.removeWhere((m) => m.markerId == markerId);
+      _markers.add(marker);
+    });
+  }
+
+  void _updateCurrentUserMarker() {
+    if (_currentPosition == null) return;
+    final markerId = const MarkerId('current_user');
+    final marker = Marker(
+      markerId: markerId,
+      position: _currentPosition!,
+      infoWindow: const InfoWindow(title: 'Benim Konumum'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+    );
+    setState(() {
+      _markers.removeWhere((m) => m.markerId == markerId);
+      _markers.add(marker);
+    });
   }
 
   void _show(String message) {
@@ -514,6 +566,85 @@ class _RidePageState extends State<RidePage> {
     _markers.clear();
 
     super.dispose();
+  }
+
+  Widget _buildMainActionButton() {
+    final String? eventStatus = widget.groupEvent?.status?.toUpperCase();
+
+    final bool isEventInProgress = eventStatus == 'IN_PROGRESS';
+    // Assume pending if status is null or PENDING
+    final bool isEventPending = eventStatus == null || eventStatus == 'PENDING';
+    final bool isEventCompleted = eventStatus == 'COMPLETED';
+
+    String buttonText = "Yükleniyor...";
+    Color buttonColor = Colors.grey;
+    VoidCallback? onPressed;
+
+    if (!_isPageReady || _isConnecting) {
+      onPressed = null;
+      buttonText = _isConnecting ? "Bağlanıyor..." : "Yükleniyor...";
+    } else if (_isGroupRide) {
+      // --- GROUP RIDE LOGIC ---
+      if (_isOwner) {
+        if (isEventInProgress) {
+          buttonText = "Sürüşü Bitir";
+          buttonColor = Colors.red;
+          onPressed = _stopRide;
+        } else if (isEventPending) {
+          buttonText = "Grup Sürüşünü Başlat";
+          buttonColor = Colors.green;
+          onPressed = _startRide;
+        } else {
+          // Completed
+          buttonText = "Sürüş Tamamlandı";
+          onPressed = null;
+        }
+      } else { // Participant
+        if (isEventPending) {
+          buttonText = "Sürüşün Başlaması Bekleniyor";
+          onPressed = null;
+        } else if (isEventInProgress) {
+          if (_isRideStarted) {
+            buttonText = "Sürüşü Bitir";
+            buttonColor = Colors.red;
+            onPressed = _stopRide;
+          } else {
+            buttonText = "Sürüşe Katıl";
+            buttonColor = Colors.green;
+            onPressed = _joinRide;
+          }
+        } else if (isEventCompleted) {
+            buttonText = "Sürüş Tamamlandı";
+            onPressed = null;
+        }
+      }
+    } else {
+      // --- INDIVIDUAL RIDE LOGIC ---
+      if (_isRideStarted) {
+        buttonText = "Sürüşü Bitir";
+        buttonColor = Colors.red;
+        onPressed = _stopRide;
+      } else {
+        buttonText = "Sürüşü Başlat";
+        buttonColor = Colors.green;
+        onPressed = _startRide;
+      }
+    }
+
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonColor,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: Text(
+        buttonText,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
   }
 
   @override
@@ -580,33 +711,7 @@ class _RidePageState extends State<RidePage> {
                   right: 20,
                   child: SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: (_isConnecting || !_isPageReady)
-                          ? null
-                          : (_isRideStarted ? _stopRide : _startRide),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isRideStarted
-                            ? Colors.red
-                            : Colors.green,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        !_isPageReady
-                            ? "Yükleniyor..."
-                            : _isConnecting
-                            ? "Bağlanıyor..."
-                            : (_isRideStarted
-                                  ? "Sürüşü Bitir"
-                                  : "${_isGroupRide ? 'Grup ' : ''}Sürüşü Başlat"),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    child: _buildMainActionButton(),
                   ),
                 ),
               ],

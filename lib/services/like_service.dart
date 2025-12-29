@@ -55,7 +55,6 @@ class LikeService {
     }
   }
 
-  //getirme
   Future<ApiResponse<List<LikeResponse>>> getMyLikes(String token) async {
     try {
       final response = await _dio.get(
@@ -63,9 +62,36 @@ class LikeService {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      final List list = response.data["object"];
-      final likes = list.map((e) => LikeResponse.fromJson(e)).toList();
-      return ApiResponse(data: likes, message: "Benim beğenilerim");
+      final data = response.data;
+      if (data is Map<String, dynamic> && data.containsKey('object')) {
+        final List list = data['object'];
+        final likes = list.map((e) => LikeResponse.fromJson(e)).toList();
+        return ApiResponse(data: likes, message: "Benim beğenilerim");
+      }
+      return ApiResponse(data: [], message: response.data['message']);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  
+  Future<ApiResponse<List<LikeResponse>>> getLikesByRoute(
+    int sharedRouteId,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/route/$sharedRouteId',
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      final data = response.data;
+      if (data is Map<String, dynamic> && data.containsKey('object')) {
+        final List list = data['object'];
+        final likes = list.map((e) => LikeResponse.fromJson(e)).toList();
+        return ApiResponse(data: likes, message: data['message']);
+      }
+      return ApiResponse(data: [], message: data['message']);
     } on DioException catch (e) {
       throw _handleError(e);
     }
