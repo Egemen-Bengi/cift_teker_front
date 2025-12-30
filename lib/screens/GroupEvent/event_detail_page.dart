@@ -38,12 +38,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
     _loadCurrentUser();
   }
 
-  /// 🔐 Token oku
   Future<String?> _getToken() async {
     return await _storage.read(key: "auth_token");
   }
 
-  /// 👤 Token içinden userId al ve owner kontrolü yap
   Future<void> _loadCurrentUser() async {
     try {
       final token = await _getToken();
@@ -94,7 +92,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = false);
   }
 
-  /// ➖ Etkinlikten ayrıl
   Future<void> _leaveEvent() async {
     final token = await _getToken();
     if (token == null) return;
@@ -113,7 +110,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = false);
   }
 
-  /// 🗑️ Etkinliği sil
   Future<void> _deleteEvent() async {
     final token = await _getToken();
     if (token == null) return;
@@ -142,10 +138,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _eventService.deleteGroupEvent(
-        _currentEvent.groupEventId,
-        token,
-      );
+      await _eventService.deleteGroupEvent(_currentEvent.groupEventId, token);
       if (mounted) Navigator.pop(context, _currentEvent);
       return;
     } catch (e) {
@@ -161,7 +154,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context,
       MaterialPageRoute(
         builder: (_) =>
-              ParticipantPage(groupEventId: _currentEvent.groupEventId),
+            ParticipantPage(groupEventId: _currentEvent.groupEventId),
       ),
     );
   }
@@ -169,18 +162,14 @@ class _EventDetailPageState extends State<EventDetailPage> {
   void _navigateToGroupRide() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => RidePage(groupEventId: _currentEvent.groupEventId),
-      ),
+      MaterialPageRoute(builder: (_) => RidePage(groupEvent: _currentEvent)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_userLoaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return WillPopScope(
@@ -189,93 +178,98 @@ class _EventDetailPageState extends State<EventDetailPage> {
         return false;
       },
       child: Scaffold(
-      appBar: AppBar(
-      title: Text(_currentEvent.title),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context, _currentEvent),
+        appBar: AppBar(
+          title: Text(_currentEvent.title),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context, _currentEvent),
+          ),
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  _buildActionButton(
-                    text: "Etkinliğe Katıl",
-                    icon: Icons.check_circle_outline,
-                    color: Colors.green,
-                    isEnabled: !_isOwner && !_isJoined,
-                    onTap: _joinEvent,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildActionButton(
-                    text: "Etkinlikten Ayrıl",
-                    icon: Icons.cancel_outlined,
-                    color: Colors.red,
-                    isEnabled: !_isOwner && _isJoined,
-                    onTap: _leaveEvent,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildActionButton(
-                    text: "Grup Sürüşüne Katıl",
-                    icon: Icons.directions_bike,
-                    color: Colors.purple,
-                    isEnabled: _isJoined || _isOwner,
-                    onTap: _navigateToGroupRide,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildActionButton(
-                    text: "Katılımcıları Gör",
-                    icon: Icons.people_outline,
-                    color: Colors.blue,
-                    isEnabled: true,
-                    onTap: _openParticipants,
-                  ),
-
-                  if (_isOwner) ...[
-                    const SizedBox(height: 16),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
                     _buildActionButton(
-                      text: "Etkinliği Düzenle",
-                      icon: Icons.edit_outlined,
-                      color: Colors.indigo,
-                      isEnabled: true,
-                      onTap: () async {
-                        final result = await Navigator.push<GroupEventResponse?>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EditEventPage(event: _currentEvent),
-                          ),
-                        );
-
-                        if (result != null) {
-                          setState(() {
-                            _currentEvent = result;
-                            _isJoined = _currentEvent.isJoined;
-                          });
-                          _showAlertDialog("Başarılı", "Etkinlik güncellendi.");
-                        }
-                      },
+                      text: "Etkinliğe Katıl",
+                      icon: Icons.check_circle_outline,
+                      color: Colors.green,
+                      isEnabled: !_isOwner && !_isJoined,
+                      onTap: _joinEvent,
                     ),
                     const SizedBox(height: 16),
+
                     _buildActionButton(
-                      text: "Etkinliği Sil",
-                      icon: Icons.delete_outline,
-                      color: Colors.orange,
-                      isEnabled: true,
-                      onTap: _deleteEvent,
+                      text: "Etkinlikten Ayrıl",
+                      icon: Icons.cancel_outlined,
+                      color: Colors.red,
+                      isEnabled: !_isOwner && _isJoined,
+                      onTap: _leaveEvent,
                     ),
+                    const SizedBox(height: 16),
+
+                    _buildActionButton(
+                      text: "Grup Sürüşüne Katıl",
+                      icon: Icons.directions_bike,
+                      color: Colors.purple,
+                      isEnabled: _isJoined || _isOwner,
+                      onTap: _navigateToGroupRide,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildActionButton(
+                      text: "Katılımcıları Gör",
+                      icon: Icons.people_outline,
+                      color: Colors.blue,
+                      isEnabled: true,
+                      onTap: _openParticipants,
+                    ),
+
+                    if (_isOwner) ...[
+                      const SizedBox(height: 16),
+                      _buildActionButton(
+                        text: "Etkinliği Düzenle",
+                        icon: Icons.edit_outlined,
+                        color: Colors.indigo,
+                        isEnabled: true,
+                        onTap: () async {
+                          final result =
+                              await Navigator.push<GroupEventResponse?>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      EditEventPage(event: _currentEvent),
+                                ),
+                              );
+
+                          if (result != null) {
+                            setState(() {
+                              _currentEvent = result;
+                              _isJoined = _currentEvent.isJoined;
+                            });
+                            _showAlertDialog(
+                              "Başarılı",
+                              "Etkinlik güncellendi.",
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildActionButton(
+                        text: "Etkinliği Sil",
+                        icon: Icons.delete_outline,
+                        color: Colors.orange,
+                        isEnabled: true,
+                        onTap: _deleteEvent,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
       ),
     );
   }

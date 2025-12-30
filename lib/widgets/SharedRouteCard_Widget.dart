@@ -55,11 +55,29 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
   bool showCommentBox = false;
   final TextEditingController _commentController = TextEditingController();
 
+  int _likeCount = 0;
+
   @override
   void initState() {
     super.initState();
     isLiked = widget.myLike != null;
     isRecorded = widget.myRecord != null;
+    _loadLikeCount();
+  }
+
+  Future<void> _loadLikeCount() async {
+    try {
+      final response =
+          await _likeService.getLikeCount(widget.sharedRoute.sharedRouteId);
+      if (mounted) {
+        setState(() {
+          _likeCount = response.data ?? 0;
+        });
+      }
+    } catch (e) {
+      // Hata durumunda sayacı 0 olarak bırakabiliriz.
+      debugPrint("Like count error: $e");
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -70,6 +88,11 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     setState(() {
       isLiked = !isLiked;
+      if (isLiked) {
+        _likeCount++;
+      } else {
+        _likeCount--;
+      }
     });
     widget.onChanged?.call();
   }
@@ -195,10 +218,10 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: Colors.orange.shade100,
-                                    child: Text(comment.userId.toString()[0]),
+                                    child: Text(comment.username.isNotEmpty ? comment.username[0].toUpperCase() : "?"),
                                   ),
                                   title: Text(
-                                    "Kullanıcı ${comment.userId}${isReply ? ' (Yanıtladı)' : ''}",
+                                    "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: isReply ? 12 : 13,
@@ -224,7 +247,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                                 comment.commentId;
 
                                             selectedUsername =
-                                                "Kullanıcı ${comment.userId}";
+                                                comment.username;
                                           });
                                         },
                                         child: const Text(
@@ -427,6 +450,81 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     }
   }
 
+  void _showLikesSheet() async {
+    final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
+
+    final response = await _likeService.getLikesByRoute(
+      widget.sharedRoute.sharedRouteId,
+      token,
+    );
+    final likers = response.data ?? [];
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const Text(
+                "Beğenenler",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const Divider(),
+              Expanded(
+                child: likers.isEmpty
+                    ? const Center(child: Text("Henüz beğenen kimse yok."))
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: likers.length,
+                        itemBuilder: (context, index) {
+                          final liker = likers[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.red[100],
+                              child: Text(
+                                liker.username.isNotEmpty
+                                    ? liker.username[0].toUpperCase()
+                                    : "?",
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            title: Text(
+                              liker.username,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final createdAt = DateFormat(
@@ -544,6 +642,25 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             ),
 
             const SizedBox(height: 12),
+
+            /// STATS
+            if (_likeCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: GestureDetector(
+                  onTap: _showLikesSheet,
+                  child: Text(
+                    "$_likeCount beğeni",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ),
+
+            const Divider(height: 1),
+            const SizedBox(height: 4),
 
             /// ACTIONS
             Row(
