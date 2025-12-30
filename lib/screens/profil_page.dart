@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
+import 'package:cift_teker_front/models/requests/updateProfileImage_request.dart';
 import 'package:cift_teker_front/models/requests/updateUsername_request.dart';
 import 'package:cift_teker_front/models/requests/updateEmail_request.dart';
 import 'package:cift_teker_front/models/requests/updatePhoneNumber_request.dart';
@@ -9,11 +12,13 @@ import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/login_service.dart';
 import 'package:cift_teker_front/services/user_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cift_teker_front/screens/like_page.dart';
 import 'package:cift_teker_front/screens/comment_page.dart';
 import 'package:cift_teker_front/screens/record_page.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -270,6 +275,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
   void updateEmail(UserResponse user) {
     final emailController = TextEditingController(text: user.email);
 
@@ -313,7 +319,8 @@ class _ProfilePageState extends State<ProfilePage> {
               final token = await _storage.read(key: "auth_token");
 
               if (token == null || token.isEmpty) {
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
                 Navigator.pop(alertContext);
                 _showAlertDialog("Hata", "Oturum bulunamadı.");
                 return;
@@ -325,7 +332,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   token,
                 );
 
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
 
                 String title, message;
                 if (updateResponse.message.toLowerCase().contains("success") ||
@@ -346,7 +354,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 _showAlertDialog(title, message);
               } catch (e) {
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
                 Navigator.pop(alertContext);
                 _showAlertDialog(
                   "Hata",
@@ -360,6 +369,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     ).then((_) {});
   }
+
   void updatePhoneNumber(UserResponse user) {
     final phoneNumberController = TextEditingController(text: user.phoneNumber);
 
@@ -403,7 +413,8 @@ class _ProfilePageState extends State<ProfilePage> {
               final token = await _storage.read(key: "auth_token");
 
               if (token == null || token.isEmpty) {
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
                 Navigator.pop(alertContext);
                 _showAlertDialog("Hata", "Oturum bulunamadı.");
                 return;
@@ -415,7 +426,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   token,
                 );
 
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
 
                 String title, message;
                 if (updateResponse.message.toLowerCase().contains("success") ||
@@ -427,7 +439,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   message = "Telefon numaranız güncellendi.";
                 } else {
                   title = "Hata";
-                  message = "Telefon numarası güncellenemedi: ${updateResponse.message}";
+                  message =
+                      "Telefon numarası güncellenemedi: ${updateResponse.message}";
                 }
 
                 Navigator.pop(alertContext);
@@ -436,7 +449,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 _showAlertDialog(title, message);
               } catch (e) {
-                if (loadingContext != null && mounted) Navigator.pop(loadingContext!);
+                if (loadingContext != null && mounted)
+                  Navigator.pop(loadingContext!);
                 Navigator.pop(alertContext);
                 _showAlertDialog(
                   "Hata",
@@ -449,6 +463,104 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     ).then((_) {});
+  }
+
+  void _showProfileImageOptions(UserResponse user) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text("Fotoğraf Çek"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadProfileImage(ImageSource.camera, user);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Galeriden Seç"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadProfileImage(ImageSource.gallery, user);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadProfileImage(
+    ImageSource source,
+    UserResponse user,
+  ) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (pickedFile == null) return;
+
+      final file = File(pickedFile.path);
+
+      BuildContext? loadingContext;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          loadingContext = ctx;
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) throw "Oturum bulunamadı.";
+
+      String safeUsername = user.username
+          .toLowerCase()
+          .replaceAll(" ", "_")
+          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+
+      final fileName = DateTime.now().toIso8601String().replaceAll(":", "-");
+
+      final ref = FirebaseStorage.instance.ref(
+        'profile_images/$safeUsername/$fileName.png',
+      );
+
+      final snapshot = await ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/png'),
+      );
+
+      final imageUrl = await snapshot.ref.getDownloadURL();
+
+      await _userService.updateProfileImage(
+        UpdateProfileImageRequest(newProfileImage: imageUrl),
+        token,
+      );
+
+      if (loadingContext != null && mounted) {
+        Navigator.pop(loadingContext!);
+      }
+
+      setState(() {
+        _futureUser = _loadUser();
+      });
+
+      _showAlertDialog("Başarılı", "Profil fotoğrafı güncellendi 🎉");
+    } catch (e) {
+      Navigator.pop(context);
+      _showAlertDialog("Hata", e.toString());
+    }
   }
 
   Future<void> _logout() async {
@@ -535,12 +647,15 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 // PROFIL FOTOĞRAFI
-                CircleAvatar(
-                  radius: 80,
-                  backgroundImage: user.profileImage != null
-                      ? NetworkImage(user.profileImage!)
-                      : const AssetImage("assets/ciftTeker.png")
-                            as ImageProvider,
+                GestureDetector(
+                  onTap: () => _showProfileImageOptions(user),
+                  child: CircleAvatar(
+                    radius: 80,
+                    backgroundImage: user.profileImage != null
+                        ? NetworkImage(user.profileImage!)
+                        : const AssetImage("assets/ciftTeker.png")
+                              as ImageProvider,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -610,28 +725,26 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
 
-                  const SizedBox(height: 12),
-                  // E-posta güncelle butonu
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => updateEmail(user),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "E-posta Güncelle",
-                        style: TextStyle(fontSize: 16),
+                const SizedBox(height: 12),
+                // E-posta güncelle butonu
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => updateEmail(user),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    child: const Text(
+                      "E-posta Güncelle",
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
+                ),
 
                 const SizedBox(height: 15),
                 // Şifre güncelle butonu
@@ -664,9 +777,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text("Telefon Numarasını Güncelle", style: TextStyle(fontSize: 16)),
+                    child: const Text(
+                      "Telefon Numarasını Güncelle",
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
                 ),
 

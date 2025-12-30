@@ -1,5 +1,6 @@
 import 'package:cift_teker_front/models/requests/updateEmail_request.dart';
 import 'package:cift_teker_front/models/requests/updatePhoneNumber_request.dart';
+import 'package:cift_teker_front/models/requests/updateProfileImage_request.dart';
 import 'package:cift_teker_front/models/responses/updateUsername_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -81,13 +82,13 @@ class UserService {
 
   // profil resmi güncelleme
   Future<ApiResponse<UserResponse>> updateProfileImage(
-    String newProfileImage,
+    UpdateProfileImageRequest request,
     String token,
   ) async {
     try {
       final response = await _dio.patch(
         '/updateProfileImage',
-        data: {"newProfileImage": newProfileImage},
+        data: request.toJson(),
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -131,7 +132,7 @@ class UserService {
       }
     }
   }
-  
+
   // telefon numarası guncelleme
   Future<ApiResponse<UserResponse>> updatePhoneNumber(
     UpdatePhoneNumberRequest phoneNumber,
