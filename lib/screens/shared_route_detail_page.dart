@@ -33,7 +33,6 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
 
   bool _hasChanged = false;
   bool _isOwner = false;
-  bool _userLoaded = false;
 
   @override
   void initState() {
@@ -49,27 +48,17 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
     try {
       final token = await _getToken();
       if (token == null) {
-        _finishUserLoad(false);
+        _isOwner = false;
         return;
       }
 
       final decoded = JwtDecoder.decode(token);
       final int currentUserId = decoded["userId"];
 
-      setState(() {
-        _isOwner = currentUserId == route.userId;
-        _userLoaded = true;
-      });
+      _isOwner = currentUserId == route.userId;
     } catch (_) {
-      _finishUserLoad(false);
+      _isOwner = false;
     }
-  }
-
-  void _finishUserLoad(bool isOwner) {
-    setState(() {
-      _isOwner = isOwner;
-      _userLoaded = true;
-    });
   }
 
   Future<SharedRouteResponse> _loadRoute() async {

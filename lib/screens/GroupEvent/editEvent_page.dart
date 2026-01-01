@@ -147,10 +147,10 @@ class _EditEventPageState extends State<EditEventPage> {
         request,
         token,
       );
-      if (resp != null && resp.data != null) {
+      if (resp.data != null) {
         Navigator.pop(context, resp.data);
       } else {
-        _showAlert("Hata", "Güncelleme başarısız: ${resp?.message}");
+        _showAlert("Hata", "Güncelleme başarısız: ${resp.message}");
       }
     } catch (e) {
       _showAlert("Hata", "Güncelleme sırasında hata: $e");

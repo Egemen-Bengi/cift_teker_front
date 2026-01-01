@@ -4,6 +4,7 @@ class ParticipantLocation {
   final int userId;
   final String username;
   final int? rideId;
+  final int? groupEventId;
   final LatLng location;
   final DateTime timestamp;
   final double speed;
@@ -12,6 +13,7 @@ class ParticipantLocation {
     required this.userId,
     required this.username,
     this.rideId,
+    this.groupEventId,
     required this.location,
     required this.timestamp,
     this.speed = 0.0,
@@ -24,13 +26,20 @@ class ParticipantLocation {
     } else if (json['timestamp'] is int) {
       parsedTimestamp = DateTime.fromMillisecondsSinceEpoch(json['timestamp']);
     } else {
-      parsedTimestamp = DateTime.now(); 
+      parsedTimestamp = DateTime.now();
     }
 
     return ParticipantLocation(
       userId: int.tryParse(json['userId']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? 'Bilinmeyen Sürücü',
-      rideId: json['rideId'] != null ? (int.tryParse(json['rideId'].toString()) ?? 0) : null,
+      rideId: json['rideId'] != null
+          ? (int.tryParse(json['rideId'].toString()) ?? 0)
+          : null,
+
+      groupEventId: json['groupEventId'] != null
+          ? (int.tryParse(json['groupEventId'].toString()) ?? 0)
+          : null,
+
       location: LatLng(
         double.tryParse(json['latitude']?.toString() ?? '0.0') ?? 0.0,
         double.tryParse(json['longitude']?.toString() ?? '0.0') ?? 0.0,
@@ -45,6 +54,7 @@ class ParticipantLocation {
       'userId': userId,
       'username': username,
       'rideId': rideId,
+      'groupEventId': groupEventId,
       'latitude': location.latitude,
       'longitude': location.longitude,
       'timestamp': timestamp.toIso8601String(),

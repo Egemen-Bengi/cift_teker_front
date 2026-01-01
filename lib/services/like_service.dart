@@ -31,9 +31,12 @@ class LikeService {
   }
 
   // like sayısı
-  Future<ApiResponse<int>> getLikeCount(int sharedRouteId) async {
+  Future<ApiResponse<int>> getLikeCount(int sharedRouteId, String token) async {
     try {
-      final response = await _dio.get("/count/$sharedRouteId");
+      final response = await _dio.get(
+        "/count/$sharedRouteId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
       return ApiResponse.fromJson(response.data, (json) => json as int);
     } on DioException catch (e) {
@@ -74,7 +77,6 @@ class LikeService {
     }
   }
 
-  
   Future<ApiResponse<List<LikeResponse>>> getLikesByRoute(
     int sharedRouteId,
     String token,

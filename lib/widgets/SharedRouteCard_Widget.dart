@@ -67,15 +67,18 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
   Future<void> _loadLikeCount() async {
     try {
-      final response =
-          await _likeService.getLikeCount(widget.sharedRoute.sharedRouteId);
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) return;
+      final response = await _likeService.getLikeCount(
+        widget.sharedRoute.sharedRouteId,
+        token,
+      );
       if (mounted) {
         setState(() {
-          _likeCount = response.data ?? 0;
+          _likeCount = response.data;
         });
       }
     } catch (e) {
-      // Hata durumunda sayacı 0 olarak bırakabiliriz.
       debugPrint("Like count error: $e");
     }
   }
@@ -134,7 +137,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
         token,
       );
       setState(() {
-        comments = response.data ?? [];
+        comments = response.data;
         isLoadingComments = false;
       });
     } catch (e) {
@@ -152,7 +155,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       token,
     );
 
-    final sortedComments = _sortComments(response.data ?? []);
+    final sortedComments = _sortComments(response.data);
 
     if (!mounted) return;
 
@@ -188,7 +191,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                 const Divider(),
 
                 Expanded(
-                  child: response.data == null || response.data!.isEmpty
+                  child: response.data.isEmpty
                       ? const Center(child: Text("Henüz yorum yapılmamış."))
                       : ListView.builder(
                           controller: scrollController,
@@ -218,7 +221,11 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: Colors.orange.shade100,
-                                    child: Text(comment.username.isNotEmpty ? comment.username[0].toUpperCase() : "?"),
+                                    child: Text(
+                                      comment.username.isNotEmpty
+                                          ? comment.username[0].toUpperCase()
+                                          : "?",
+                                    ),
                                   ),
                                   title: Text(
                                     "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",
@@ -246,8 +253,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                                 comment.parentCommentId ??
                                                 comment.commentId;
 
-                                            selectedUsername =
-                                                comment.username;
+                                            selectedUsername = comment.username;
                                           });
                                         },
                                         child: const Text(
@@ -458,7 +464,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       widget.sharedRoute.sharedRouteId,
       token,
     );
-    final likers = response.data ?? [];
+    final likers = response.data;
 
     if (!mounted) return;
 
@@ -511,8 +517,9 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                             ),
                             title: Text(
                               liker.username,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           );
                         },
