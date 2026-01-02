@@ -162,7 +162,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
   void _navigateToGroupRide() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RidePage(groupEvent: _currentEvent)),
+      MaterialPageRoute(
+        builder: (_) => RidePage(groupEventId: _currentEvent.groupEventId),
+      ),
     );
   }
 
