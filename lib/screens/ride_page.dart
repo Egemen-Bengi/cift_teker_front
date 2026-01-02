@@ -54,6 +54,7 @@ class _RidePageState extends State<RidePage> {
   bool _isPageReady = false;
   bool _isConnecting = false;
   bool _isOwner = false;
+  bool _isSaving = false;
 
   String _eventStatus = "PLANNED";
   int _apiParticipantCount = 0;
@@ -274,19 +275,45 @@ class _RidePageState extends State<RidePage> {
 
       if (!mounted) return;
 
+      if (_isGroupRide &&
+          !_isOwner &&
+          location.userId == _eventCreatorId &&
+          location.speed == -1.0) {
+        _handleOwnerEndedRide();
+        return;
+      }
+
       setState(() {
         if (location.userId != _userId) {
           _participantLocations[location.userId] = location;
           _updateMarkers();
-        } else {
-          debugPrint(
-            "Kendi verimi aldım, haritaya başkası olarak eklemiyorum.",
-          );
         }
       });
     } catch (e) {
       debugPrint("JSON Parse Hatası: $e");
     }
+  }
+
+  void _handleOwnerEndedRide() {
+    if (_isSaving) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Etkinlik Sona Erdi"),
+        content: const Text("Kurucu sürüşü bitirdi. Sürüşünüz kaydediliyor..."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _stopRide(isOwnerTermination: true);
+            },
+            child: const Text("Tamam"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateMarkers() {
@@ -316,7 +343,7 @@ class _RidePageState extends State<RidePage> {
       );
     }
 
-    if (_currentPosition != null) {
+    if (_currentPosition != null && _isGroupRide) {
       _markers.add(
         Marker(
           markerId: const MarkerId('me'),
@@ -368,65 +395,97 @@ class _RidePageState extends State<RidePage> {
       };
 
       final String payload = jsonEncode(payloadMap);
-
       _stompClient!.send(destination: "/app/sendLocation", body: payload);
     } catch (e) {
       debugPrint("Konum gönderme hatası: $e");
     }
   }
 
-  Future<void> _stopRide() async {
+  Future<void> _stopRide({bool isOwnerTermination = false}) async {
+    if (_isSaving) return;
+
     _locationTimer?.cancel();
     _statusPollingTimer?.cancel();
-    setState(() => _isConnecting = true);
+
+    if (mounted) {
+      setState(() {
+        _isConnecting = true;
+        _isSaving = true;
+      });
+    }
 
     try {
+      if (_isOwner &&
+          _isGroupRide &&
+          !isOwnerTermination &&
+          _stompClient != null) {
+        final signalPayload = jsonEncode({
+          "userId": _userId,
+          "rideId": _rideId,
+          "groupEventId": widget.groupEventId,
+          "latitude": _currentPosition?.latitude ?? 0.0,
+          "longitude": _currentPosition?.longitude ?? 0.0,
+          "speed": -1.0,
+          "timestamp": DateTime.now().toUtc().toIso8601String(),
+        });
+        _stompClient!.send(
+          destination: "/app/sendLocation",
+          body: signalPayload,
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
       _stompClient?.deactivate();
       _stompClient = null;
 
+      List<LatLng> filteredPoints = [];
       if (_ridePoints.isNotEmpty) {
-        List<LatLng> filteredPoints = [];
         for (int i = 0; i < _ridePoints.length; i += 10) {
           filteredPoints.add(_ridePoints[i]);
         }
         if (filteredPoints.isEmpty || filteredPoints.last != _ridePoints.last) {
           filteredPoints.add(_ridePoints.last);
         }
-
-        final String mapData = jsonEncode(
-          filteredPoints
-              .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
-              .toList(),
-        );
-        final double avgSpeed = _elapsedSeconds > 0
-            ? _totalDistance / (_elapsedSeconds / 3600)
-            : 0.0;
-
-        final req = RideHistoryRequest(
-          mapData: mapData,
-          distanceKm: _totalDistance,
-          durationSeconds: _elapsedSeconds,
-          averageSpeedKmh: avgSpeed,
-          startDateTime: DateTime.now().subtract(
-            Duration(seconds: _elapsedSeconds),
-          ),
-          endDateTime: DateTime.now(),
-          groupEventId: widget.groupEventId,
-        );
-
-        await _rideHistoryService.saveRideHistory(req, _token!);
       }
 
+      final String mapData = jsonEncode(
+        filteredPoints
+            .map((e) => {'latitude': e.latitude, 'longitude': e.longitude})
+            .toList(),
+      );
+
+      final double avgSpeed = _elapsedSeconds > 0
+          ? _totalDistance / (_elapsedSeconds / 3600)
+          : 0.0;
+
+      final req = RideHistoryRequest(
+        mapData: mapData,
+        distanceKm: _totalDistance,
+        durationSeconds: _elapsedSeconds,
+        averageSpeedKmh: avgSpeed,
+        startDateTime: DateTime.now().subtract(
+          Duration(seconds: _elapsedSeconds),
+        ),
+        endDateTime: DateTime.now(),
+        groupEventId: widget.groupEventId,
+      );
+
+      await _rideHistoryService.saveRideHistory(req, _token!);
+
       if (mounted) {
-        _showSnack(
-          "Sürüş kaydedildi. Mesafe: ${_totalDistance.toStringAsFixed(2)} km",
-        );
+        if (!isOwnerTermination) {
+          _showSnack("Sürüş kaydedildi.");
+        }
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) _showSnack("Hata oluştu: $e");
-    } finally {
-      if (mounted) setState(() => _isConnecting = false);
+      debugPrint("Sürüş kaydetme hatası: $e");
+      if (mounted) _showSnack("Kaydederken hata oluştu: $e");
+      setState(() {
+        _isConnecting = false;
+        _isSaving = false;
+      });
     }
   }
 
@@ -471,7 +530,9 @@ class _RidePageState extends State<RidePage> {
         isButtonEnabled = !_isConnecting;
       } else {
         if (_isOwner) {
-          buttonText = "Grup Sürüşünü Başlat";
+          buttonText = _isGroupRide
+              ? "Grup Sürüşünü Başlat"
+              : "Bireysel Sürüş Başlat";
           buttonColor = Colors.green;
           isButtonEnabled = !_isConnecting;
         } else {
@@ -493,7 +554,9 @@ class _RidePageState extends State<RidePage> {
         : "Katılımcılar: $_apiParticipantCount";
 
     return Scaffold(
-      appBar: CustomAppBar(title: "Grup Sürüşü"),
+      appBar: CustomAppBar(
+        title: _isGroupRide ? "Grup Sürüşü" : "Bireysel Sürüş",
+      ),
       body: _currentPosition == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(
@@ -548,7 +611,7 @@ class _RidePageState extends State<RidePage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: isButtonEnabled
-                          ? (_isRideStarted ? _stopRide : _startRide)
+                          ? (_isRideStarted ? () => _stopRide() : _startRide)
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: buttonColor,
