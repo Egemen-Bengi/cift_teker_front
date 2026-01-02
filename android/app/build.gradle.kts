@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -9,10 +11,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localProperties.load(new FileInputStream(localPropertiesFile))
+    localProperties.load(localPropertiesFile.inputStream())
 }
 
 android {
@@ -31,11 +33,11 @@ android {
 
     defaultConfig {
         applicationId = "com.evst.cift_teker_front"
-        minSdkVersion(24)
-        targetSdkVersion(34)
+        minSdk = 24
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders = [googleMapsKey: localProperties['google.maps.key']]
+        manifestPlaceholders["googleMapsKey"] = localProperties.getProperty("google.maps.key") ?: ""
     }
     
 
@@ -64,4 +66,3 @@ if (googleServicesFile.exists()) {
 } else {
     println("Skipping com.google.gms.google-services plugin because google-services.json was not found at ${googleServicesFile.path}")
 }
-

@@ -259,7 +259,9 @@ class _RidePageState extends State<RidePage> {
           _handleLocationMessage(frame.body ?? "");
         },
       );
-      debugPrint("Subscribed to: /topic/group/${widget.groupEvent!.groupEventId}");
+      debugPrint(
+        "Subscribed to: /topic/group/${widget.groupEvent!.groupEventId}",
+      );
     } else {
       if (_rideId != null) {
         _stompClient!.subscribe(
@@ -407,9 +409,7 @@ class _RidePageState extends State<RidePage> {
         distanceKm: _totalDistance,
         durationSeconds: _elapsedSeconds,
         averageSpeedKmh: averageSpeed,
-        startDateTime: rideEndDate.subtract(
-          Duration(seconds: _elapsedSeconds),
-        ),
+        startDateTime: rideEndDate.subtract(Duration(seconds: _elapsedSeconds)),
         endDateTime: rideEndDate,
         groupEventId: _isGroupRide ? widget.groupEvent?.groupEventId : null,
       );
@@ -422,8 +422,9 @@ class _RidePageState extends State<RidePage> {
       setState(() {
         if (_isGroupRide) {
           _participantLocations.clear();
-          _markers
-              .removeWhere((m) => m.markerId.value.startsWith('participant_'));
+          _markers.removeWhere(
+            (m) => m.markerId.value.startsWith('participant_'),
+          );
         }
         _ridePoints.clear();
         _rideId = null;
@@ -521,7 +522,8 @@ class _RidePageState extends State<RidePage> {
         title: location.username,
         snippet: 'Hız: ${location.speed.toStringAsFixed(1)} km/h',
       ),
-      icon: _participantIcon ??
+      icon:
+          _participantIcon ??
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
     );
     setState(() {
@@ -599,7 +601,8 @@ class _RidePageState extends State<RidePage> {
           buttonText = "Sürüş Tamamlandı";
           onPressed = null;
         }
-      } else { // Participant
+      } else {
+        // Participant
         if (isEventPending) {
           buttonText = "Sürüşün Başlaması Bekleniyor";
           onPressed = null;
@@ -614,8 +617,8 @@ class _RidePageState extends State<RidePage> {
             onPressed = _joinRide;
           }
         } else if (isEventCompleted) {
-            buttonText = "Sürüş Tamamlandı";
-            onPressed = null;
+          buttonText = "Sürüş Tamamlandı";
+          onPressed = null;
         }
       }
     } else {
@@ -636,9 +639,7 @@ class _RidePageState extends State<RidePage> {
       style: ElevatedButton.styleFrom(
         backgroundColor: buttonColor,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(
         buttonText,

@@ -38,62 +38,60 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadEvents() async {
-  final token = await _storage.read(key: "auth_token");
-  _token = token;
-  if (!mounted) return;
-
-  if (token == null || token.isEmpty) {
+    final token = await _storage.read(key: "auth_token");
+    _token = token;
     if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-      _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-      _dataLoaded = true;
-    });
-    return;
+
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _dataLoaded = true;
+      });
+      return;
+    }
+
+    try {
+      final allEventsResponse = await _eventService.getAllGroupEvents(token);
+      if (!mounted) return;
+
+      final myEventsResponse = await _eventService.getMyGroupEvents(token);
+      if (!mounted) return;
+
+      final myEventIds = myEventsResponse.data
+          .map((e) => e.groupEventId)
+          .toSet();
+
+      final filteredAllEvents = allEventsResponse.data
+          .where((e) => !myEventIds.contains(e.groupEventId))
+          .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.value(
+          ApiResponse(
+            data: filteredAllEvents,
+            message: "Tüm etkinlikler yüklendi",
+          ),
+        );
+        _futureMyEvents = Future.value(
+          ApiResponse(
+            data: myEventsResponse.data,
+            message: "Benim etkinliklerim yüklendi",
+          ),
+        );
+        _dataLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.error("Hata oluştu: $e");
+        _futureMyEvents = Future.error("Hata oluştu: $e");
+        _dataLoaded = true;
+      });
+    }
   }
-
-  try {
-    final allEventsResponse =
-        await _eventService.getAllGroupEvents(token);
-    if (!mounted) return;
-
-    final myEventsResponse =
-        await _eventService.getMyGroupEvents(token);
-    if (!mounted) return;
-
-    final myEventIds =
-        myEventsResponse.data.map((e) => e.groupEventId).toSet();
-
-    final filteredAllEvents = allEventsResponse.data
-        .where((e) => !myEventIds.contains(e.groupEventId))
-        .toList();
-
-    if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.value(
-        ApiResponse(
-          data: filteredAllEvents,
-          message: "Tüm etkinlikler yüklendi",
-        ),
-      );
-      _futureMyEvents = Future.value(
-        ApiResponse(
-          data: myEventsResponse.data,
-          message: "Benim etkinliklerim yüklendi",
-        ),
-      );
-      _dataLoaded = true;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.error("Hata oluştu: $e");
-      _futureMyEvents = Future.error("Hata oluştu: $e");
-      _dataLoaded = true;
-    });
-  }
-}
-
 
   Widget _buildCityFilter({required bool isAllTab}) {
     final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
@@ -208,7 +206,14 @@ class _HomePageState extends State<HomePage>
 
         final now = DateTime.now();
         final events = List<GroupEventResponse>.from(snapshot.data!.data)
-          ..removeWhere((event) => event.startDateTime.isBefore(now))
+          ..removeWhere((event) {
+            final status = event.status?.toUpperCase();
+            final isExpired = event.endDateTime.isBefore(now);
+
+            if (status == 'COMPLETED') return true;
+            if (status == 'PENDING' && isExpired) return true;
+            return false;
+          })
           ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
         final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
