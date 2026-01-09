@@ -58,6 +58,10 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
     });
   }
 
+  void _goBackToRideHistory() {
+    Navigator.of(context).pop();
+  }
+
   void _setRouteAndMarkers(List<LatLng> points) {
     _polylines.add(
       Polyline(
@@ -270,6 +274,8 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
       appBar: CustomAppBar(
         title: "Sürüş Detayı",
         showAvatar: false,
+        onBackButtonPressed: _goBackToRideHistory,
+        showBackButton: true,
         actions: [
           _isSharing
               ? const Padding(

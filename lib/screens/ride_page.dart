@@ -527,6 +527,10 @@ class _RidePageState extends State<RidePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _goBackToEventDetail() {
+    Navigator.of(context).pop();
+  }
+
   @override
   void dispose() {
     _locationTimer?.cancel();
@@ -575,6 +579,9 @@ class _RidePageState extends State<RidePage> {
     return Scaffold(
       appBar: CustomAppBar(
         title: _isGroupRide ? "Grup Sürüşü" : "Bireysel Sürüş",
+        onBackButtonPressed: _isGroupRide ? _goBackToEventDetail : null,
+        showBackButton: _isGroupRide,
+        showAvatar: !_isGroupRide,
       ),
       body: _currentPosition == null
           ? const Center(child: CircularProgressIndicator())
