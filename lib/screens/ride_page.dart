@@ -477,7 +477,26 @@ class _RidePageState extends State<RidePage> {
         if (!isOwnerTermination) {
           _showSnack("Sürüş kaydedildi.");
         }
-        Navigator.pop(context);
+        if (widget.groupEventId != null) {
+          Navigator.pop(context);
+        } else {
+          setState(() {
+            _isConnecting = false;
+            _isSaving = false;
+
+            _isRideStarted = false;
+
+            _elapsedSeconds = 0;
+            _totalDistance = 0.0;
+            _currentSpeed = 0.0;
+
+            _ridePoints.clear();
+            _participantLocations.clear();
+            _markers.clear();
+
+            _rideId = null;
+          });
+        }
       }
     } catch (e) {
       debugPrint("Sürüş kaydetme hatası: $e");
