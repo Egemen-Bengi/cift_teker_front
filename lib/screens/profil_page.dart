@@ -11,7 +11,6 @@ import 'package:cift_teker_front/screens/auth_screen.dart';
 import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/login_service.dart';
 import 'package:cift_teker_front/services/user_service.dart';
-import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -39,142 +38,120 @@ class _ProfilePageState extends State<ProfilePage> {
     _futureUser = _loadUser();
   }
 
-  void _goBackToHome() {
-    final mainNavState = context.findAncestorStateOfType<MainNavigationState>();
-    mainNavState?.onItemTapped(0);
+  Future<ApiResponse<UserResponse>> _loadUser() async {
+    final token = await _storage.read(key: "auth_token");
+    if (token == null || token.isEmpty) {
+      return Future.error("Oturum bulunamadı.");
+    }
+    return _userService.getMyInfo(token);
   }
 
-  Future<void> _showAlertDialog(String title, String message) {
-    return showDialog(
+  Future<void> _genericUpdateDialog({
+    required String title,
+    required String label,
+    required String initialValue,
+    required Future<ApiResponse> Function(String val, String token) onUpdate,
+  }) async {
+    final controller = TextEditingController(text: initialValue);
+
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(message),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.grey[100],
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam', style: TextStyle(color: Colors.black)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final value = controller.text.trim();
+              if (value.isEmpty) return;
+
+              Navigator.pop(ctx);
+              _handleUpdateProcess(() async {
+                final token = await _storage.read(key: "auth_token");
+                if (token == null) throw "Token bulunamadı";
+                return onUpdate(value, token);
+              });
+            },
+            child: const Text(
+              "Güncelle",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<ApiResponse<UserResponse>> _loadUser() async {
-    final token = await _storage.read(key: "auth_token");
-
-    if (token == null || token.isEmpty) {
-      return Future.error("Kullanıcı doğrulaması başarısız.");
-    }
-
-    return _userService.getMyInfo(token);
-  }
-
-  void _updateUsername(UserResponse user) {
-    final usernameController = TextEditingController(text: user.username);
-
+  Future<void> _handleUpdateProcess(
+    Future<ApiResponse> Function() action,
+  ) async {
     showDialog(
       context: context,
-      builder: (alertContext) => AlertDialog(
-        title: const Text("Kullanıcı Adını Güncelle"),
-        content: TextField(
-          controller: usernameController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Yeni kullanıcı adı",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(alertContext);
-            },
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newUsername = usernameController.text.trim();
-              if (newUsername.isEmpty) {
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "Kullanıcı adı boş olamaz.");
-                return;
-              }
+      barrierDismissible: false,
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: Colors.orange)),
+    );
 
-              BuildContext? loadingContext;
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) {
-                  loadingContext = ctx;
-                  return const Center(child: CircularProgressIndicator());
-                },
-              );
+    try {
+      final response = await action();
 
-              final token = await _storage.read(key: "auth_token");
+      if (!mounted) return;
+      Navigator.pop(context);
 
-              if (token == null || token.isEmpty) {
-                if (loadingContext != null) Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "Oturum bulunamadı.");
-                return;
-              }
+      if (response.httpStatus == "200" ||
+          response.message.toLowerCase().contains("success")) {
+        setState(() {
+          _futureUser = _loadUser();
+        });
+        _showSnack(Colors.green, "İşlem başarılı! ✅");
+      } else {
+        _showSnack(Colors.red, "Hata: ${response.message}");
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      _showSnack(Colors.red, "Bir hata oluştu: $e");
+    }
+  }
 
-              try {
-                final updateResponse = await _userService.updateUsername(
-                  UpdateUsernameRequest(newUsername: newUsername),
-                  token,
-                );
-
-                if (loadingContext != null) Navigator.pop(loadingContext!);
-
-                String title, message;
-                if (updateResponse.message.toLowerCase().contains("success") ||
-                    updateResponse.httpStatus == "200") {
-                  setState(() {
-                    _futureUser = _loadUser();
-                  });
-                  title = "Başarılı";
-                  message = "Kullanıcı adınız güncellendi.";
-                } else {
-                  title = "Hata";
-                  message =
-                      "Kullanıcı adı güncellenemedi: ${updateResponse.message}";
-                }
-
-                Navigator.pop(alertContext);
-
-                await Future.delayed(const Duration(milliseconds: 100));
-
-                _showAlertDialog(title, message);
-              } catch (e) {
-                if (loadingContext != null) Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog(
-                  "Hata",
-                  "Güncelleme sırasında hata: ${e.toString()}",
-                );
-              }
-            },
-            child: const Text("Güncelle"),
-          ),
-        ],
-      ),
-    ).then((_) {});
+  void _showSnack(Color color, String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   void _updatePassword() {
-    final oldPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
+    final oldController = TextEditingController();
+    final newController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text("Şifre Değiştir"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: oldPasswordController,
+              controller: oldController,
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Eski Şifre",
@@ -183,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: newPasswordController,
+              controller: newController,
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Yeni Şifre",
@@ -194,275 +171,62 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text("İptal"),
           ),
           ElevatedButton(
-            child: const Text("Değiştir"),
             onPressed: () async {
-              final oldPass = oldPasswordController.text.trim();
-              final newPass = newPasswordController.text.trim();
-
-              if (oldPass.isEmpty || newPass.isEmpty) {
-                Navigator.pop(dialogContext);
-                _showAlertDialog("Hata", "Alanlar boş bırakılamaz.");
+              if (oldController.text.isEmpty || newController.text.isEmpty)
                 return;
-              }
+              Navigator.pop(ctx);
 
-              Navigator.pop(dialogContext);
-
-              BuildContext? loadingDialogContext;
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) {
-                  loadingDialogContext = ctx;
-                  return const Center(child: CircularProgressIndicator());
-                },
+              _handlePasswordChangeProcess(
+                oldController.text,
+                newController.text,
               );
-
-              final token = await _storage.read(key: "auth_token");
-
-              if (token == null) {
-                if (loadingDialogContext != null) {
-                  Navigator.pop(loadingDialogContext!);
-                }
-                _showAlertDialog("Hata", "Token bulunamadı.");
-                return;
-              }
-
-              try {
-                final loginService = LoginService();
-
-                await loginService.updatePassword(
-                  UpdatePasswordRequest(
-                    oldPassword: oldPass,
-                    newPassword: newPass,
-                  ),
-                  token,
-                );
-
-                await _storage.delete(key: "auth_token");
-
-                if (loadingDialogContext != null) {
-                  Navigator.pop(loadingDialogContext!);
-                }
-
-                await _showAlertDialog(
-                  "Başarılı",
-                  "Şifre değiştirildi. Yeniden giriş yapmanız gerekiyor.",
-                );
-
-                if (!mounted) return;
-
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const AuthPage()),
-                  (Route<dynamic> route) => false,
-                );
-              } catch (e) {
-                if (loadingDialogContext != null) {
-                  Navigator.pop(loadingDialogContext!);
-                }
-
-                if (mounted) {
-                  _showAlertDialog("Hata", "İşlem başarısız: ${e.toString()}");
-                }
-              }
             },
+            child: const Text("Değiştir"),
           ),
         ],
       ),
     );
   }
 
-  void updateEmail(UserResponse user) {
-    final emailController = TextEditingController(text: user.email);
-
+  Future<void> _handlePasswordChangeProcess(
+    String oldPass,
+    String newPass,
+  ) async {
     showDialog(
       context: context,
-      builder: (alertContext) => AlertDialog(
-        title: const Text("E-posta Güncelle"),
-        content: TextField(
-          controller: emailController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Yeni e-posta",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(alertContext);
-            },
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newEmail = emailController.text.trim();
-              if (newEmail.isEmpty) {
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "E-posta boş olamaz.");
-                return;
-              }
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
-              BuildContext? loadingContext;
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) {
-                  loadingContext = ctx;
-                  return const Center(child: CircularProgressIndicator());
-                },
-              );
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) throw "Oturum yok";
 
-              final token = await _storage.read(key: "auth_token");
+      final loginService = LoginService();
+      await loginService.updatePassword(
+        UpdatePasswordRequest(oldPassword: oldPass, newPassword: newPass),
+        token,
+      );
 
-              if (token == null || token.isEmpty) {
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "Oturum bulunamadı.");
-                return;
-              }
+      await _storage.delete(key: "auth_token");
 
-              try {
-                final updateResponse = await _userService.updateEmail(
-                  UpdateEmailRequest(newEmail: newEmail),
-                  token,
-                );
+      if (!mounted) return;
+      Navigator.pop(context);
 
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthPage()),
+        (route) => false,
+      );
 
-                String title, message;
-                if (updateResponse.message.toLowerCase().contains("success") ||
-                    updateResponse.httpStatus == "200") {
-                  setState(() {
-                    _futureUser = _loadUser();
-                  });
-                  title = "Başarılı";
-                  message = "E-postanız güncellendi.";
-                } else {
-                  title = "Hata";
-                  message = "E-posta güncellenemedi: ${updateResponse.message}";
-                }
-
-                Navigator.pop(alertContext);
-
-                await Future.delayed(const Duration(milliseconds: 100));
-
-                _showAlertDialog(title, message);
-              } catch (e) {
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog(
-                  "Hata",
-                  "Güncelleme sırasında hata: ${e.toString()}",
-                );
-              }
-            },
-            child: const Text("Güncelle"),
-          ),
-        ],
-      ),
-    ).then((_) {});
-  }
-
-  void updatePhoneNumber(UserResponse user) {
-    final phoneNumberController = TextEditingController(text: user.phoneNumber);
-
-    showDialog(
-      context: context,
-      builder: (alertContext) => AlertDialog(
-        title: const Text("Telefon Numarası Güncelle"),
-        content: TextField(
-          controller: phoneNumberController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Yeni telefon numarası",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(alertContext);
-            },
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newPhoneNumber = phoneNumberController.text.trim();
-              if (newPhoneNumber.isEmpty) {
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "Telefon numarası boş olamaz.");
-                return;
-              }
-
-              BuildContext? loadingContext;
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) {
-                  loadingContext = ctx;
-                  return const Center(child: CircularProgressIndicator());
-                },
-              );
-
-              final token = await _storage.read(key: "auth_token");
-
-              if (token == null || token.isEmpty) {
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog("Hata", "Oturum bulunamadı.");
-                return;
-              }
-
-              try {
-                final updateResponse = await _userService.updatePhoneNumber(
-                  UpdatePhoneNumberRequest(newPhoneNumber: newPhoneNumber),
-                  token,
-                );
-
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
-
-                String title, message;
-                if (updateResponse.message.toLowerCase().contains("success") ||
-                    updateResponse.httpStatus == "200") {
-                  setState(() {
-                    _futureUser = _loadUser();
-                  });
-                  title = "Başarılı";
-                  message = "Telefon numaranız güncellendi.";
-                } else {
-                  title = "Hata";
-                  message =
-                      "Telefon numarası güncellenemedi: ${updateResponse.message}";
-                }
-
-                Navigator.pop(alertContext);
-
-                await Future.delayed(const Duration(milliseconds: 100));
-
-                _showAlertDialog(title, message);
-              } catch (e) {
-                if (loadingContext != null && mounted)
-                  Navigator.pop(loadingContext!);
-                Navigator.pop(alertContext);
-                _showAlertDialog(
-                  "Hata",
-                  "Güncelleme sırasında hata: ${e.toString()}",
-                );
-              }
-            },
-            child: const Text("Güncelle"),
-          ),
-        ],
-      ),
-    ).then((_) {});
+      _showSnack(Colors.green, "Şifre değişti, lütfen tekrar giriş yapın.");
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      _showSnack(Colors.red, "Hata: $e");
+    }
   }
 
   void _showProfileImageOptions(UserResponse user) {
@@ -507,71 +271,45 @@ class _ProfilePageState extends State<ProfilePage> {
         source: source,
         imageQuality: 80,
       );
-
       if (pickedFile == null) return;
 
-      final file = File(pickedFile.path);
+      _handleUpdateProcess(() async {
+        final token = await _storage.read(key: "auth_token");
 
-      BuildContext? loadingContext;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) {
-          loadingContext = ctx;
-          return const Center(child: CircularProgressIndicator());
-        },
-      );
+        String safeUsername = user.username.toLowerCase().replaceAll(
+          RegExp(r'[^a-z0-9_]'),
+          '',
+        );
+        final fileName = "${DateTime.now().millisecondsSinceEpoch}.png";
 
-      final token = await _storage.read(key: "auth_token");
-      if (token == null) throw "Oturum bulunamadı.";
+        final ref = FirebaseStorage.instance.ref(
+          'profile_images/$safeUsername/$fileName',
+        );
+        final snapshot = await ref.putFile(
+          File(pickedFile.path),
+          SettableMetadata(contentType: 'image/png'),
+        );
+        final imageUrl = await snapshot.ref.getDownloadURL();
 
-      String safeUsername = user.username
-          .toLowerCase()
-          .replaceAll(" ", "_")
-          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
-
-      final fileName = DateTime.now().toIso8601String().replaceAll(":", "-");
-
-      final ref = FirebaseStorage.instance.ref(
-        'profile_images/$safeUsername/$fileName.png',
-      );
-
-      final snapshot = await ref.putFile(
-        file,
-        SettableMetadata(contentType: 'image/png'),
-      );
-
-      final imageUrl = await snapshot.ref.getDownloadURL();
-
-      await _userService.updateProfileImage(
-        UpdateProfileImageRequest(newProfileImage: imageUrl),
-        token,
-      );
-
-      if (loadingContext != null && mounted) {
-        Navigator.pop(loadingContext!);
-      }
-
-      setState(() {
-        _futureUser = _loadUser();
+        return _userService.updateProfileImage(
+          UpdateProfileImageRequest(newProfileImage: imageUrl),
+          token!,
+        );
       });
-
-      _showAlertDialog("Başarılı", "Profil fotoğrafı güncellendi 🎉");
     } catch (e) {
-      Navigator.pop(context);
-      _showAlertDialog("Hata", e.toString());
+      _showSnack(Colors.red, "Resim yüklenemedi: $e");
     }
   }
 
   Future<void> _logout() async {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text("Çıkış Yap"),
         content: const Text("Çıkış yapmak istediğine emin misin?"),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text("İptal"),
           ),
           ElevatedButton(
@@ -580,12 +318,9 @@ class _ProfilePageState extends State<ProfilePage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.pop(context);
-
+              Navigator.pop(ctx);
               await _storage.delete(key: "auth_token");
-
               if (!mounted) return;
-
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const AuthPage()),
@@ -598,327 +333,398 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Bilgileri gösteren satır widget
-  Widget _infoRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar BottomNav ile uyumlu şekilde sade tutuldu
-      appBar: CustomAppBar(
-        title: "Profil",
-        showBackButton: true,
-        onBackButtonPressed: _goBackToHome,
-        showAvatar: false,
-      ),
+      backgroundColor: const Color(0xFFF5F5F5),
       body: FutureBuilder<ApiResponse<UserResponse>>(
         future: _futureUser,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError || snapshot.data == null) {
-            return Center(
-              child: Text("Hata: ${snapshot.error ?? "Bilinmeyen hata"}"),
-            );
+            return Center(child: Text("Hata: ${snapshot.error ?? "Veri yok"}"));
           }
 
           final user = snapshot.data!.data;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                // PROFIL FOTOĞRAFI
-                GestureDetector(
-                  onTap: () => _showProfileImageOptions(user),
-                  child: CircleAvatar(
-                    radius: 80,
-                    backgroundImage: user.profileImage != null
-                        ? NetworkImage(user.profileImage!)
-                        : const AssetImage("assets/ciftTeker.png")
-                              as ImageProvider,
-                  ),
+
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 220.0,
+                floating: false,
+                pinned: true,
+                backgroundColor: Colors.orange,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    context
+                        .findAncestorStateOfType<MainNavigationState>()
+                        ?.onItemTapped(0);
+                  },
                 ),
-
-                const SizedBox(height: 20),
-
-                // İSİM + SOYİSİM
-                Text(
-                  "${user.name} ${user.surname}",
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                Text(
-                  user.email,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-
-                const SizedBox(height: 30),
-
-                // PROFİL BİLGİLERİ KARTI
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.orange.shade400,
+                          Colors.orange.shade800,
+                        ],
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 40),
+                        GestureDetector(
+                          onTap: () => _showProfileImageOptions(user),
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundImage: user.profileImage != null
+                                      ? NetworkImage(user.profileImage!)
+                                      : const AssetImage("assets/ciftTeker.png")
+                                            as ImageProvider,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.blue,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "${user.name} ${user.surname}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          user.email,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _infoRow("Kullanıcı Adı", user.username),
-                      const Divider(),
-                      _infoRow("Mail Adresi", user.email),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                // Kullanıcı adı güncelle butonu
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _updateUsername(user),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 24,
+                      Row(
+                        children: [
+                          _buildStatCard(
+                            "Beğeniler",
+                            Icons.favorite,
+                            Colors.red,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LikePage(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildStatCard(
+                            "Yorumlar",
+                            Icons.chat_bubble,
+                            Colors.blue,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CommentPage(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildStatCard(
+                            "Kaydedilen",
+                            Icons.bookmark,
+                            Colors.orange,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RecordPage(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Kullanıcı Adını Güncelle",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
 
-                const SizedBox(height: 12),
-                // E-posta güncelle butonu
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => updateEmail(user),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "E-posta Güncelle",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-                // Şifre güncelle butonu
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _updatePassword,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Şifreyi Değiştir",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-                //  Telefon numarası güncelle butonu
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => updatePhoneNumber(user),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Telefon Numarasını Güncelle",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Etkileşimlerim",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _interactionButton(
-                        icon: Icons.favorite,
-                        title: "Beğenilerim",
-                        color: Colors.red,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const LikePage()),
-                          );
-                        },
+                      const SizedBox(height: 24),
+                      const Text(
+                        "Hesap Ayarları",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      _interactionButton(
-                        icon: Icons.chat_bubble_outline,
-                        title: "Yorumlarım",
-                        color: Colors.blue,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const CommentPage(),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildSettingsTile(
+                              icon: Icons.person,
+                              title: "Kullanıcı Adı",
+                              value: user.username,
+                              onTap: () => _genericUpdateDialog(
+                                title: "Kullanıcı Adı Değiştir",
+                                label: "Yeni Ad",
+                                initialValue: user.username,
+                                onUpdate: (val, token) =>
+                                    _userService.updateUsername(
+                                      UpdateUsernameRequest(newUsername: val),
+                                      token,
+                                    ),
+                              ),
+                            ),
+                            const Divider(height: 1, indent: 60),
+                            _buildSettingsTile(
+                              icon: Icons.email,
+                              title: "E-posta",
+                              value: user.email,
+                              onTap: () => _genericUpdateDialog(
+                                title: "E-posta Değiştir",
+                                label: "Yeni E-posta",
+                                initialValue: user.email,
+                                onUpdate: (val, token) =>
+                                    _userService.updateEmail(
+                                      UpdateEmailRequest(newEmail: val),
+                                      token,
+                                    ),
+                              ),
+                            ),
+                            const Divider(height: 1, indent: 60),
+                            _buildSettingsTile(
+                              icon: Icons.phone,
+                              title: "Telefon",
+                              value: user.phoneNumber ?? "Belirtilmemiş",
+                              onTap: () => _genericUpdateDialog(
+                                title: "Telefon Değiştir",
+                                label: "Yeni Numara",
+                                initialValue: user.phoneNumber ?? "",
+                                onUpdate: (val, token) =>
+                                    _userService.updatePhoneNumber(
+                                      UpdatePhoneNumberRequest(
+                                        newPhoneNumber: val,
+                                      ),
+                                      token,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Text(
+                        "Güvenlik",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      _interactionButton(
-                        icon: Icons.bookmark,
-                        title: "Kaydedilenler",
-                        color: Colors.orange,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RecordPage(),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.lock,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              title: const Text(
+                                "Şifre Değiştir",
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey,
+                              ),
+                              onTap: _updatePassword,
+                            ),
+                            const Divider(height: 1, indent: 60),
+                            ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.logout,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              title: const Text(
+                                "Çıkış Yap",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              onTap: _logout,
+                            ),
+                          ],
+                        ),
                       ),
+
+                      const SizedBox(height: 50),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 15),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _logout,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Çıkış Yap",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
     );
   }
-}
 
-Widget _interactionButton({
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-  Color color = Colors.orange,
-}) {
-  return InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 26),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: color,
+  Widget _buildStatCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-          const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.orange),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      subtitle: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: Colors.grey[600]),
+      ),
+      trailing: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Icon(Icons.edit, size: 16, color: Colors.grey),
+      ),
+      onTap: onTap,
+    );
+  }
 }

@@ -1,7 +1,9 @@
 import 'package:cift_teker_front/enum/DetailEntrySource.dart';
 import 'package:cift_teker_front/models/responses/like_response.dart';
+import 'package:cift_teker_front/models/responses/record_response.dart';
 import 'package:cift_teker_front/models/responses/sharedRoute_response.dart';
 import 'package:cift_teker_front/services/like_service.dart';
+import 'package:cift_teker_front/services/record_service.dart';
 import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:cift_teker_front/widgets/SharedRouteCard_Widget.dart';
@@ -27,8 +29,10 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
   final SharedRouteService _sharedRouteService = SharedRouteService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final LikeService _likeService = LikeService();
+  final RecordService _recordService = RecordService();
 
   LikeResponse? _currentLike;
+  RecordResponse? _currentRecord;
   late Future<SharedRouteResponse> _futureRoute;
 
   bool _hasChanged = false;
@@ -80,6 +84,15 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
       _currentLike = null;
     }
 
+    final recordApiResponse = await _recordService.getMyRecords(token);
+    try {
+      _currentRecord = recordApiResponse.data.firstWhere(
+        (r) => r.sharedRouteId == widget.sharedRouteId,
+      );
+    } catch (_) {
+      _currentRecord = null;
+    }
+
     return route;
   }
 
@@ -105,6 +118,7 @@ class _SharedRouteDetailPageState extends State<SharedRouteDetailPage> {
               SharedRouteCard(
                 sharedRoute: snapshot.data!,
                 myLike: _currentLike,
+                myRecord: _currentRecord,
                 isDetail: true,
                 isOwner: _isOwner,
                 onChanged: () {
