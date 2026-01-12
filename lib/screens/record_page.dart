@@ -54,6 +54,13 @@ class _RecordPageState extends State<RecordPage> {
     return routes;
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _futureRecordedRoutes = _loadRecordedRoutes();
+    });
+    await _futureRecordedRoutes;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,62 +70,65 @@ class _RecordPageState extends State<RecordPage> {
         onBackButtonPressed: () => Navigator.pop(context),
         showAvatar: false,
       ),
-      body: FutureBuilder<List<SharedRouteResponse>>(
-        future: _futureRecordedRoutes,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: FutureBuilder<List<SharedRouteResponse>>(
+          future: _futureRecordedRoutes,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(child: Text("Hata: ${snapshot.error}"));
-          }
+            if (snapshot.hasError) {
+              return Center(child: Text("Hata: ${snapshot.error}"));
+            }
 
-          final routes = snapshot.data ?? [];
+            final routes = snapshot.data ?? [];
 
-          if (routes.isEmpty) {
-            return const Center(
-              child: Text(
-                "Henüz kaydettiğin bir paylaşım yok 🔖",
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          }
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.75,
-            ),
-            itemCount: routes.length,
-            itemBuilder: (context, index) {
-              final route = routes[index];
-
-              return RouteGridItem(
-                route: route,
-                onTap: () async {
-                  final bool? changed = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SharedRouteDetailPage(
-                        sharedRouteId: route.sharedRouteId,
-                        entrySource: DetailEntrySource.recorded,
-                      ),
-                    ),
-                  );
-                  if (changed == true) {
-                    setState(() {
-                      _futureRecordedRoutes = _loadRecordedRoutes();
-                    });
-                  }
-                },
+            if (routes.isEmpty) {
+              return const Center(
+                child: Text(
+                  "Henüz kaydettiğin bir paylaşım yok 🔖",
+                  style: TextStyle(fontSize: 16),
+                ),
               );
-            },
-          );
-        },
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: routes.length,
+              itemBuilder: (context, index) {
+                final route = routes[index];
+
+                return RouteGridItem(
+                  route: route,
+                  onTap: () async {
+                    final bool? changed = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SharedRouteDetailPage(
+                          sharedRouteId: route.sharedRouteId,
+                          entrySource: DetailEntrySource.recorded,
+                        ),
+                      ),
+                    );
+                    if (changed == true) {
+                      setState(() {
+                        _futureRecordedRoutes = _loadRecordedRoutes();
+                      });
+                    }
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

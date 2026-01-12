@@ -22,14 +22,12 @@ class _CommentPageState extends State<CommentPage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   late Future<List<SharedRouteResponse>> _futureCommentedRoutes;
-
   int? _currentUserId;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
-
     _futureCommentedRoutes = _loadCommentedRoutes();
   }
 
@@ -55,21 +53,23 @@ class _CommentPageState extends State<CommentPage> {
     final ApiResponse<List<CommentResponse>> response = await _commentService
         .getMyComments(token);
 
-    final comments = response.data;
-
-    final Set<int> routeIds = comments
+    final Set<int> routeIds = response.data
         .where((c) => c.sharedRouteId != null)
         .map((c) => c.sharedRouteId!)
-        .toSet(); // aynı rotayı 1 kez göster
+        .toSet();
 
-    final List<SharedRouteResponse> routes = [];
-
-    for (final id in routeIds) {
-      final route = await _sharedRouteService.getSharedRouteById(id, token);
-      routes.add(route);
-    }
+    final routes = await Future.wait(
+      routeIds.map((id) => _sharedRouteService.getSharedRouteById(id, token)),
+    );
 
     return routes;
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _futureCommentedRoutes = _loadCommentedRoutes();
+    });
+    await _futureCommentedRoutes;
   }
 
   @override
@@ -81,39 +81,48 @@ class _CommentPageState extends State<CommentPage> {
         onBackButtonPressed: () => Navigator.pop(context),
         showAvatar: false,
       ),
-      body: FutureBuilder<List<SharedRouteResponse>>(
-        future: _futureCommentedRoutes,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: FutureBuilder<List<SharedRouteResponse>>(
+          future: _futureCommentedRoutes,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return Center(child: Text("Hata: ${snapshot.error}"));
-          }
-
-          final routes = snapshot.data ?? [];
-
-          if (routes.isEmpty) {
-            return const Center(
-              child: Text(
-                "Henüz yorum yaptığın bir paylaşım yok 💬",
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: routes.length,
-            itemBuilder: (context, index) {
-              return SharedRouteCard(
-                sharedRoute: routes[index],
-                isOwner: _currentUserId == routes[index].userId,
+            if (snapshot.hasError) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.4),
+                  Center(child: Text("Hata: ${snapshot.error}")),
+                ],
               );
-            },
-          );
-        },
+            }
+
+            final routes = snapshot.data ?? [];
+
+            if (routes.isEmpty) {
+              return const Center(
+                child: Text(
+                  "Henüz yorum yaptığın bir paylaşım yok 💬",
+                  style: TextStyle(fontSize: 16),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: routes.length,
+              itemBuilder: (context, index) {
+                return SharedRouteCard(
+                  sharedRoute: routes[index],
+                  isOwner: _currentUserId == routes[index].userId,
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

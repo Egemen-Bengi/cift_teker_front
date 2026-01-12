@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -38,6 +40,7 @@ class _RidePageState extends State<RidePage> {
   final List<LatLng> _ridePoints = [];
 
   final Map<int, ParticipantLocation> _participantLocations = {};
+  final Map<int, BitmapDescriptor> _markerIconCache = {};
   final Set<Marker> _markers = {};
 
   StompClient? _stompClient;
@@ -48,6 +51,7 @@ class _RidePageState extends State<RidePage> {
   int? _userId;
   int? _eventCreatorId;
   String? _token;
+  String _myUsername = "Ben";
 
   bool _isGroupRide = false;
   bool _isRideStarted = false;
@@ -90,8 +94,22 @@ class _RidePageState extends State<RidePage> {
       _isPageReady = true;
     });
 
+    _generateMyMarker();
+
     if (_isGroupRide && !_isOwner && _eventStatus == "PLANNED") {
       _startStatusPolling();
+    }
+  }
+
+  Future<void> _generateMyMarker() async {
+    if (_userId != null) {
+      final icon = await _createCustomMarkerBitmap(_myUsername, isMe: true);
+      if (mounted) {
+        setState(() {
+          _markerIconCache[_userId!] = icon;
+          _updateMarkers();
+        });
+      }
     }
   }
 
@@ -107,15 +125,112 @@ class _RidePageState extends State<RidePage> {
     try {
       Map<String, dynamic> decodedToken = JwtDecoder.decode(_token!);
       _userId = decodedToken["userId"] ?? decodedToken["id"];
+      _myUsername = decodedToken["sub"] ?? "Ben";
 
       if (_eventCreatorId != null && _userId != null) {
         _isOwner = (_userId == _eventCreatorId);
       } else if (!_isGroupRide) {
         _isOwner = true;
       }
+
+      if (mounted) {
+        _generateMyMarker();
+      }
     } catch (e) {
       debugPrint("Token decode hatası: $e");
     }
+  }
+
+  Future<BitmapDescriptor> _createCustomMarkerBitmap(
+    String name, {
+    bool isMe = false,
+    bool isCreator = false,
+  }) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+
+    final Canvas canvas = Canvas(pictureRecorder);
+
+    const double size = 120.0;
+    const double shadowWidth = 4.0;
+    const double borderSize = 6.0;
+
+    final Paint shadowPaint = Paint()..color = Colors.black.withOpacity(0.3);
+    final Paint borderPaint = Paint()..color = Colors.white;
+
+    Color roleColor = Colors.blue;
+    if (isMe)
+      roleColor = Colors.red;
+    else if (isCreator)
+      roleColor = Colors.green;
+
+    final Paint rolePaint = Paint()..color = roleColor;
+
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2 + 4),
+      (size / 2) - shadowWidth,
+      shadowPaint,
+    );
+
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      (size / 2) - shadowWidth,
+      rolePaint,
+    );
+
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      (size / 2) - shadowWidth - borderSize,
+      borderPaint,
+    );
+
+    final Paint innerCirclePaint = Paint()..color = Colors.grey.shade200;
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      (size / 2) - shadowWidth - borderSize - 2,
+      innerCirclePaint,
+    );
+
+    String initial = name.isNotEmpty ? name[0].toUpperCase() : "?";
+
+    TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    textPainter.text = TextSpan(
+      text: initial,
+      style: TextStyle(
+        fontSize: 50,
+        fontWeight: FontWeight.bold,
+        color: roleColor,
+      ),
+    );
+
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2),
+    );
+
+    final Path path = Path();
+    path.moveTo(size / 2 - 10, size - 10);
+    path.lineTo(size / 2, size + 10);
+    path.lineTo(size / 2 + 10, size - 10);
+    path.close();
+    canvas.drawPath(path, rolePaint);
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(
+      size.toInt(),
+      (size + 15).toInt(),
+    );
+
+    final ByteData? byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+
+    if (byteData == null) return BitmapDescriptor.defaultMarker;
+
+    return BitmapDescriptor.fromBytes(byteData.buffer.asUint8List());
   }
 
   Future<void> _fetchEventStatus() async {
@@ -266,7 +381,7 @@ class _RidePageState extends State<RidePage> {
     setState(() => _isConnecting = false);
   }
 
-  void _handleLocationMessage(String messageBody) {
+  void _handleLocationMessage(String messageBody) async {
     if (messageBody.isEmpty) return;
 
     try {
@@ -281,6 +396,21 @@ class _RidePageState extends State<RidePage> {
           location.speed == -1.0) {
         _handleOwnerEndedRide();
         return;
+      }
+
+      if (!_markerIconCache.containsKey(location.userId) &&
+          location.userId != _userId) {
+        bool isCreator =
+            _eventCreatorId != null && location.userId == _eventCreatorId;
+        final icon = await _createCustomMarkerBitmap(
+          location.username,
+          isCreator: isCreator,
+        );
+        if (mounted) {
+          setState(() {
+            _markerIconCache[location.userId] = icon;
+          });
+        }
       }
 
       setState(() {
@@ -322,34 +452,35 @@ class _RidePageState extends State<RidePage> {
     for (final entry in _participantLocations.entries) {
       final loc = entry.value;
 
-      double markerHue = BitmapDescriptor.hueBlue;
-      String roleTitle = loc.username;
-
-      if (_eventCreatorId != null && loc.userId == _eventCreatorId) {
-        markerHue = BitmapDescriptor.hueGreen;
-        roleTitle = "${loc.username} (Kurucu)";
-      }
+      BitmapDescriptor icon =
+          _markerIconCache[loc.userId] ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
 
       _markers.add(
         Marker(
           markerId: MarkerId('user_${loc.userId}'),
           position: loc.location,
           infoWindow: InfoWindow(
-            title: roleTitle,
+            title: loc.username,
             snippet: '${loc.speed.toStringAsFixed(1)} km/h',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(markerHue),
+          icon: icon,
         ),
       );
     }
 
-    if (_currentPosition != null && _isGroupRide) {
+    if (_currentPosition != null && _isGroupRide && _userId != null) {
+      BitmapDescriptor myIcon =
+          _markerIconCache[_userId!] ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+
       _markers.add(
         Marker(
           markerId: const MarkerId('me'),
           position: _currentPosition!,
           infoWindow: const InfoWindow(title: 'Ben'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          icon: myIcon,
+          zIndex: 2,
         ),
       );
     }
@@ -392,6 +523,7 @@ class _RidePageState extends State<RidePage> {
         "longitude": currentPos.longitude,
         "speed": _currentSpeed,
         "timestamp": DateTime.now().toUtc().toIso8601String(),
+        "username": _myUsername,
       };
 
       final String payload = jsonEncode(payloadMap);
@@ -483,7 +615,6 @@ class _RidePageState extends State<RidePage> {
           setState(() {
             _isConnecting = false;
             _isSaving = false;
-
             _isRideStarted = false;
 
             _elapsedSeconds = 0;
@@ -593,7 +724,7 @@ class _RidePageState extends State<RidePage> {
                     target: _currentPosition!,
                     zoom: 15,
                   ),
-                  myLocationEnabled: true,
+                  myLocationEnabled: false,
                   polylines: {
                     Polyline(
                       polylineId: const PolylineId("myRoute"),

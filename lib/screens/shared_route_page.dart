@@ -27,12 +27,13 @@ class _SharedRoutePageState extends State<SharedRoutePage>
 
   late TabController _tabController;
 
-  Future<ApiResponse<List<SharedRouteResponse>>>? _futureAllSharedRoutes;
-  Future<ApiResponse<List<SharedRouteResponse>>>? _futureMySharedRoutes;
+  List<SharedRouteResponse> _allRoutes = [];
+  List<SharedRouteResponse> _myRoutes = [];
 
   Map<int, LikeResponse> _myLikes = {};
   Map<int, RecordResponse> _myRecords = {};
 
+  bool _isLoading = true;
   int? _currentUserId;
 
   @override
@@ -43,79 +44,107 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   }
 
   Future<void> _loadEvents() async {
-    final token = await _storage.read(key: "auth_token");
-    if (token == null) return;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) return;
 
-    final decoded = JwtDecoder.decode(token);
-    _currentUserId = decoded["userId"];
+      final decoded = JwtDecoder.decode(token);
+      _currentUserId = decoded["userId"];
 
-    final allRoutes = await _sharedRouteService.getAllSharedRoutes(token);
-    if (!mounted) return;
+      final results = await Future.wait([
+        _sharedRouteService.getAllSharedRoutes(token),
+        _sharedRouteService.getSharedRoutes(token),
+        _likeService.getMyLikes(token),
+        _recordService.getMyRecords(token),
+      ]);
 
-    final myRoutes = await _sharedRouteService.getSharedRoutes(token);
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final likes = await _likeService.getMyLikes(token);
-    if (!mounted) return;
+      final allRoutesResp =
+          results[0] as ApiResponse<List<SharedRouteResponse>>;
+      final myRoutesResp = results[1] as ApiResponse<List<SharedRouteResponse>>;
+      final likesResp = results[2] as ApiResponse<List<LikeResponse>>;
+      final recordsResp = results[3] as ApiResponse<List<RecordResponse>>;
 
-    final records = await _recordService.getMyRecords(token);
-    if (!mounted) return;
+      final myIds = myRoutesResp.data.map((e) => e.sharedRouteId).toSet();
 
-    _myLikes = {for (var like in likes.data) like.sharedRouteId: like};
-    _myRecords = {
-      for (var record in records.data) record.sharedRouteId: record,
-    };
+      setState(() {
+        _myLikes = {for (var like in likesResp.data) like.sharedRouteId: like};
+        _myRecords = {
+          for (var record in recordsResp.data) record.sharedRouteId: record,
+        };
 
-    final myIds = myRoutes.data.map((e) => e.sharedRouteId).toSet();
+        _myRoutes = myRoutesResp.data
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    _futureAllSharedRoutes = Future.value(
-      ApiResponse(
-        data: allRoutes.data
-            .where((e) => !myIds.contains(e.sharedRouteId))
-            .toList(),
-        message: "Tüm paylaşımlar",
-      ),
-    );
+        _allRoutes =
+            allRoutesResp.data
+                .where((e) => !myIds.contains(e.sharedRouteId))
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    _futureMySharedRoutes = Future.value(
-      ApiResponse(data: myRoutes.data, message: "Benim paylaşımlarım"),
-    );
-
-    if (!mounted) return;
-    setState(() {});
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Widget _buildRouteList(
-    Future<ApiResponse<List<SharedRouteResponse>>> future,
+    List<SharedRouteResponse> routes,
+    String emptyMessage,
   ) {
-    return FutureBuilder<ApiResponse<List<SharedRouteResponse>>>(
-      future: future,
-      builder: (_, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return RefreshIndicator(
+      onRefresh: _loadEvents,
+      child: routes.isEmpty
+          ? ListView(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.map_outlined,
+                        size: 60,
+                        color: Colors.grey.shade300,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        emptyMessage,
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
+              itemCount: routes.length,
+              itemBuilder: (_, index) {
+                final route = routes[index];
+                final bool isOwner =
+                    _currentUserId != null && route.userId == _currentUserId;
 
-        final routes = snapshot.data!.data
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-        return ListView.builder(
-          itemCount: routes.length,
-          itemBuilder: (_, index) {
-            final route = routes[index];
-            final bool isOwner =
-                _currentUserId != null && route.userId == _currentUserId;
-            return SharedRouteCard(
-              sharedRoute: route,
-              myLike: _myLikes[route.sharedRouteId],
-              myRecord: _myRecords[route.sharedRouteId],
-              isOwner: isOwner,
-              onChanged: () {
-                _loadEvents();
+                return SharedRouteCard(
+                  sharedRoute: route,
+                  myLike: _myLikes[route.sharedRouteId],
+                  myRecord: _myRecords[route.sharedRouteId],
+                  isOwner: isOwner,
+                  onChanged: () {
+                    _loadEvents();
+                  },
+                );
               },
-            );
-          },
-        );
-      },
+            ),
     );
   }
 
@@ -127,10 +156,6 @@ class _SharedRoutePageState extends State<SharedRoutePage>
 
   @override
   Widget build(BuildContext context) {
-    if (_futureAllSharedRoutes == null || _futureMySharedRoutes == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       appBar: CustomAppBar(
         title: "Paylaşılan Rotalar",
@@ -142,13 +167,15 @@ class _SharedRoutePageState extends State<SharedRoutePage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRouteList(_futureAllSharedRoutes!),
-          _buildRouteList(_futureMySharedRoutes!),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildRouteList(_allRoutes, "Henüz hiç rota paylaşılmamış."),
+                _buildRouteList(_myRoutes, "Henüz rota paylaşmadın."),
+              ],
+            ),
     );
   }
 }

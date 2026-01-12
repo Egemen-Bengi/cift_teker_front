@@ -189,55 +189,79 @@ class _HomePageState extends State<HomePage>
     Future<ApiResponse<List<GroupEventResponse>>> future, {
     required bool isAllTab,
   }) {
-    return FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return RefreshIndicator(
+      onRefresh: _loadEvents,
+      color: Colors.purple.shade600,
+      child: FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        if (snapshot.hasError) {
-          return Center(child: Text("Hata oluştu: ${snapshot.error}"));
-        }
-
-        if (snapshot.data == null || snapshot.data!.data.isEmpty) {
-          return const Center(child: Text("Hiç etkinlik bulunamadı"));
-        }
-
-        final now = DateTime.now();
-        final events = List<GroupEventResponse>.from(snapshot.data!.data)
-          ..removeWhere((event) {
-            final status = event.status?.toUpperCase();
-            final isExpired = event.endDateTime.isBefore(now);
-
-            if (status == 'COMPLETED') return true;
-            if (status == 'PENDING' && isExpired) return true;
-            return false;
-          })
-          ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
-
-        final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
-        if (selectedCity != null) {
-          events.removeWhere(
-            (event) => event.city?.toUpperCase().trim() != selectedCity.trim(),
-          );
-        }
-
-        if (events.isEmpty) {
-          return const Center(child: Text("Bu kriterlerde etkinlik yok"));
-        }
-
-        return ListView.builder(
-          itemCount: events.length,
-          itemBuilder: (context, index) {
-            return EventCard(
-              event: events[index],
-              token: _token,
-              onUpdated: () => _loadEvents(),
+          if (snapshot.hasError) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                Center(child: Text("Hata oluştu: ${snapshot.error}")),
+              ],
             );
-          },
-        );
-      },
+          }
+
+          if (snapshot.data == null || snapshot.data!.data.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                const Center(child: Text("Hiç etkinlik bulunamadı")),
+              ],
+            );
+          }
+
+          final now = DateTime.now();
+          final events = List<GroupEventResponse>.from(snapshot.data!.data)
+            ..removeWhere((event) {
+              final status = event.status?.toUpperCase();
+              final isExpired = event.endDateTime.isBefore(now);
+
+              if (status == 'COMPLETED') return true;
+              if (status == 'PENDING' && isExpired) return true;
+              return false;
+            })
+            ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+          final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+          if (selectedCity != null) {
+            events.removeWhere(
+              (event) =>
+                  event.city?.toUpperCase().trim() != selectedCity.trim(),
+            );
+          }
+
+          if (events.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                const Center(child: Text("Bu kriterlerde etkinlik yok")),
+              ],
+            );
+          }
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              return EventCard(
+                event: events[index],
+                token: _token,
+                onUpdated: () => _loadEvents(),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

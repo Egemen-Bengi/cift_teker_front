@@ -61,62 +61,70 @@ class _LikePageState extends State<LikePage> {
         onBackButtonPressed: () => Navigator.pop(context),
         showAvatar: false,
       ),
-      body: FutureBuilder<List<SharedRouteResponse>>(
-        future: _futureLikedRoutes,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Hata: ${snapshot.error}"));
-          }
-
-          final routes = snapshot.data ?? [];
-
-          if (routes.isEmpty) {
-            return const Center(
-              child: Text(
-                "Henüz beğendiğin bir rota yok 🚴‍♂️",
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          }
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.75,
-            ),
-            itemCount: routes.length,
-            itemBuilder: (context, index) {
-              final route = routes[index];
-
-              return RouteGridItem(
-                route: route,
-                onTap: () async {
-                  final bool? changed = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SharedRouteDetailPage(
-                        sharedRouteId: route.sharedRouteId,
-                        entrySource: DetailEntrySource.liked,
-                      ),
-                    ),
-                  );
-                  if (changed == true) {
-                    setState(() {
-                      _futureLikedRoutes = _loadLikedRoutes();
-                    });
-                  }
-                },
-              );
-            },
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _futureLikedRoutes = _loadLikedRoutes();
+          });
+          await _futureLikedRoutes;
         },
+        child: FutureBuilder<List<SharedRouteResponse>>(
+          future: _futureLikedRoutes,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text("Hata: ${snapshot.error}"));
+            }
+
+            final routes = snapshot.data ?? [];
+
+            if (routes.isEmpty) {
+              return const Center(
+                child: Text(
+                  "Henüz beğendiğin bir rota yok 🚴‍♂️",
+                  style: TextStyle(fontSize: 16),
+                ),
+              );
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: routes.length,
+              itemBuilder: (context, index) {
+                final route = routes[index];
+
+                return RouteGridItem(
+                  route: route,
+                  onTap: () async {
+                    final bool? changed = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SharedRouteDetailPage(
+                          sharedRouteId: route.sharedRouteId,
+                          entrySource: DetailEntrySource.liked,
+                        ),
+                      ),
+                    );
+                    if (changed == true) {
+                      setState(() {
+                        _futureLikedRoutes = _loadLikedRoutes();
+                      });
+                    }
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
