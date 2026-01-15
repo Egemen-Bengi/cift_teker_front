@@ -469,7 +469,7 @@ class _RidePageState extends State<RidePage> {
       );
     }
 
-    if (_currentPosition != null && _isGroupRide && _userId != null) {
+    if (_currentPosition != null && _userId != null) {
       BitmapDescriptor myIcon =
           _markerIconCache[_userId!] ??
           BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);

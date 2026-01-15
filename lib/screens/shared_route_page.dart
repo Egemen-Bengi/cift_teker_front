@@ -44,9 +44,6 @@ class _SharedRoutePageState extends State<SharedRoutePage>
   }
 
   Future<void> _loadEvents() async {
-    setState(() {
-      _isLoading = true;
-    });
     try {
       final token = await _storage.read(key: "auth_token");
       if (token == null) return;

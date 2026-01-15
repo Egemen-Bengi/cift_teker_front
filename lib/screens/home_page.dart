@@ -273,10 +273,6 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    if (!_dataLoaded) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       appBar: CustomAppBar(
         title: "Çift Teker",
@@ -288,27 +284,29 @@ class _HomePageState extends State<HomePage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          Column(
-            children: [
-              _buildCityFilter(isAllTab: true),
-              Expanded(
-                child: _buildEventList(_futureAllEvents, isAllTab: true),
-              ),
-            ],
-          ),
-          Column(
-            children: [
-              _buildCityFilter(isAllTab: false),
-              Expanded(
-                child: _buildEventList(_futureMyEvents, isAllTab: false),
-              ),
-            ],
-          ),
-        ],
-      ),
+      body: !_dataLoaded
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                Column(
+                  children: [
+                    _buildCityFilter(isAllTab: true),
+                    Expanded(
+                      child: _buildEventList(_futureAllEvents, isAllTab: true),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    _buildCityFilter(isAllTab: false),
+                    Expanded(
+                      child: _buildEventList(_futureMyEvents, isAllTab: false),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }
