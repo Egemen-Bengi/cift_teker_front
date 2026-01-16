@@ -1,4 +1,3 @@
-import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:cift_teker_front/models/requests/updateGroupEvent_request.dart';
 import 'package:cift_teker_front/models/responses/groupEvent_response.dart';
 import 'package:cift_teker_front/services/groupEvent_service.dart';
@@ -34,12 +33,20 @@ class _EditEventPageState extends State<EditEventPage> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.event.title);
-    _descriptionController = TextEditingController(text: widget.event.description);
+    _descriptionController = TextEditingController(
+      text: widget.event.description,
+    );
     _startDateTime = widget.event.startDateTime;
     _endDateTime = widget.event.endDateTime;
-    _startLocationController = TextEditingController(text: widget.event.startLocation);
-    _endLocationController = TextEditingController(text: widget.event.endLocation);
-    _maxParticipantsController = TextEditingController(text: widget.event.maxParticipants.toString());
+    _startLocationController = TextEditingController(
+      text: widget.event.startLocation,
+    );
+    _endLocationController = TextEditingController(
+      text: widget.event.endLocation,
+    );
+    _maxParticipantsController = TextEditingController(
+      text: widget.event.maxParticipants.toString(),
+    );
     _city = widget.event.city;
   }
 
@@ -69,7 +76,13 @@ class _EditEventPageState extends State<EditEventPage> {
     );
     if (time == null) return;
     setState(() {
-      _startDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _startDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
     });
   }
 
@@ -87,7 +100,13 @@ class _EditEventPageState extends State<EditEventPage> {
     );
     if (time == null) return;
     setState(() {
-      _endDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _endDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
     });
   }
 
@@ -101,7 +120,7 @@ class _EditEventPageState extends State<EditEventPage> {
 
     final token = await _getToken();
     if (token == null || token.isEmpty) {
-      _showAlert("Hata", "Giriş yapılmamış." );
+      _showAlert("Hata", "Giriş yapılmamış.");
       return;
     }
 
@@ -109,23 +128,29 @@ class _EditEventPageState extends State<EditEventPage> {
 
     final request = UpdateGroupEventRequest(
       title: _titleController.text.trim(),
-      description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
       startDateTime: _startDateTime,
       endDateTime: _endDateTime,
       startLocation: _startLocationController.text.trim(),
       endLocation: _endLocationController.text.trim(),
-      maxParticipants: int.tryParse(_maxParticipantsController.text.trim()) ?? widget.event.maxParticipants,
+      maxParticipants:
+          int.tryParse(_maxParticipantsController.text.trim()) ??
+          widget.event.maxParticipants,
       city: _city ?? widget.event.city ?? '',
-      status: widget.event.status,
     );
 
     try {
-      final resp = await _eventService.updateGroupEvent(widget.event.groupEventId, request, token);
-      if (resp != null && resp.data != null) {
-        _showAlert("Başarılı", "Etkinlik güncellendi.");
+      final resp = await _eventService.updateGroupEvent(
+        widget.event.groupEventId,
+        request,
+        token,
+      );
+      if (resp.data != null) {
         Navigator.pop(context, resp.data);
       } else {
-        _showAlert("Hata", "Güncelleme başarısız: ${resp?.message}");
+        _showAlert("Hata", "Güncelleme başarısız: ${resp.message}");
       }
     } catch (e) {
       _showAlert("Hata", "Güncelleme sırasında hata: $e");
@@ -141,7 +166,10 @@ class _EditEventPageState extends State<EditEventPage> {
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tamam')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
         ],
       ),
     );
@@ -160,13 +188,20 @@ class _EditEventPageState extends State<EditEventPage> {
             children: [
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Başlık', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Başlık gerekli' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Başlık',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Başlık gerekli' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Açıklama', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Açıklama',
+                  border: OutlineInputBorder(),
+                ),
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
@@ -175,14 +210,20 @@ class _EditEventPageState extends State<EditEventPage> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _pickStartDateTime,
-                      child: Text('Başlangıç: ${_startDateTime.toLocal()}'.split('.').first),
+                      child: Text(
+                        'Başlangıç: ${_startDateTime.toLocal()}'
+                            .split('.')
+                            .first,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _pickEndDateTime,
-                      child: Text('Bitiş: ${_endDateTime.toLocal()}'.split('.').first),
+                      child: Text(
+                        'Bitiş: ${_endDateTime.toLocal()}'.split('.').first,
+                      ),
                     ),
                   ),
                 ],
@@ -190,19 +231,30 @@ class _EditEventPageState extends State<EditEventPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _startLocationController,
-                decoration: const InputDecoration(labelText: 'Başlangıç Lokasyonu', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Lokasyon gerekli' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Başlangıç Lokasyonu',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Lokasyon gerekli' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _endLocationController,
-                decoration: const InputDecoration(labelText: 'Bitiş Lokasyonu', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Lokasyon gerekli' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Bitiş Lokasyonu',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Lokasyon gerekli' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _maxParticipantsController,
-                decoration: const InputDecoration(labelText: 'Maks Katılımcı', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Maks Katılımcı',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (v) {
                   final n = int.tryParse(v ?? '');
@@ -213,16 +265,24 @@ class _EditEventPageState extends State<EditEventPage> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _city,
-                decoration: const InputDecoration(labelText: 'Şehir', border: OutlineInputBorder()),
-                items: TurkishCities.list.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Şehir',
+                  border: OutlineInputBorder(),
+                ),
+                items: TurkishCities.list
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
                 onChanged: (v) => setState(() => _city = v),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Şehir seçiniz' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Şehir seçiniz' : null,
                 isExpanded: true,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting ? const CircularProgressIndicator() : const Text('Güncelle'),
+                child: _isSubmitting
+                    ? const CircularProgressIndicator()
+                    : const Text('Güncelle'),
               ),
             ],
           ),

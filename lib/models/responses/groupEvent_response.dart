@@ -4,7 +4,6 @@ class GroupEventResponse {
   final String? description;
   final DateTime startDateTime;
   final DateTime endDateTime;
-  final String status;
   final String startLocation;
   final String endLocation;
   final int maxParticipants;
@@ -12,6 +11,9 @@ class GroupEventResponse {
   final String username;
   final String? city;
   final bool isJoined;
+  final int? currentParticipants;
+  final String? status;
+  final int? activeRideId;
 
   GroupEventResponse({
     required this.groupEventId,
@@ -19,7 +21,6 @@ class GroupEventResponse {
     this.description,
     required this.startDateTime,
     required this.endDateTime,
-    required this.status,
     required this.startLocation,
     required this.endLocation,
     required this.maxParticipants,
@@ -27,6 +28,9 @@ class GroupEventResponse {
     required this.username,
     this.city,
     this.isJoined = false,
+    this.currentParticipants,
+    this.status,
+    this.activeRideId,
   });
 
   factory GroupEventResponse.fromJson(Map<String, dynamic> json) {
@@ -36,7 +40,6 @@ class GroupEventResponse {
       description: json["description"],
       startDateTime: DateTime.parse(json["startDateTime"]),
       endDateTime: DateTime.parse(json["endDateTime"]),
-      status: json["status"],
       startLocation: json["startLocation"],
       endLocation: json["endLocation"],
       maxParticipants: json["maxParticipants"],
@@ -44,6 +47,9 @@ class GroupEventResponse {
       username: json["username"],
       city: json["city"],
       isJoined: json["isJoined"] ?? false,
+      currentParticipants: json["currentParticipants"],
+      status: json["status"],
+      activeRideId: json["activeRideId"],
     );
   }
 }

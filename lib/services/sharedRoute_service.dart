@@ -1,4 +1,5 @@
 import 'package:cift_teker_front/core/models/api_response.dart';
+import 'package:cift_teker_front/models/requests/updateSharedRoute_request.dart';
 import 'package:dio/dio.dart';
 import '../models/requests/sharedRoute_request.dart';
 import '../models/responses/sharedRoute_response.dart';
@@ -87,6 +88,23 @@ class SharedRouteService {
     );
 
     return SharedRouteResponse.fromJson(response.data["object"]);
+  }
+
+  Future<ApiResponse<SharedRouteResponse>> updateSharedRoute(
+    int sharedRouteId,
+    UpdateSharedRouteRequest request,
+    String token,
+  ) async {
+    final response = await _dio.patch(
+      "/update/$sharedRouteId",
+      data: request.toJson(),
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return ApiResponse.fromJson(
+      response.data,
+      (json) => SharedRouteResponse.fromJson(json as Map<String, dynamic>),
+    );
   }
 
   // Hata yönetimi

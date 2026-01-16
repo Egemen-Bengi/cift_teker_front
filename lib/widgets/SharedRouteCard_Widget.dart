@@ -1,9 +1,12 @@
+import 'package:cift_teker_front/components/UserChip.dart';
 import 'package:cift_teker_front/models/responses/comment_response.dart';
 import 'package:cift_teker_front/models/responses/like_response.dart';
 import 'package:cift_teker_front/models/responses/record_response.dart';
+import 'package:cift_teker_front/screens/editSharedRoute_page.dart';
 import 'package:cift_teker_front/services/comment_service.dart';
 import 'package:cift_teker_front/services/like_service.dart';
 import 'package:cift_teker_front/services/record_service.dart';
+import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,6 +18,7 @@ class SharedRouteCard extends StatefulWidget {
   final LikeResponse? myLike;
   final RecordResponse? myRecord;
   final bool isDetail;
+  final bool isOwner;
   final VoidCallback? onChanged;
 
   const SharedRouteCard({
@@ -23,6 +27,7 @@ class SharedRouteCard extends StatefulWidget {
     this.myLike,
     this.myRecord,
     this.isDetail = false,
+    required this.isOwner,
     this.onChanged,
   });
 
@@ -35,6 +40,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
   final LikeService _likeService = LikeService();
   final RecordService _recordService = RecordService();
   final CommentService _commentService = CommentService();
+  final SharedRouteService _sharedRouteService = SharedRouteService();
 
   List<CommentResponse> comments = [];
   bool isLoadingComments = false;
@@ -49,11 +55,32 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
   bool showCommentBox = false;
   final TextEditingController _commentController = TextEditingController();
 
+  int _likeCount = 0;
+
   @override
   void initState() {
     super.initState();
     isLiked = widget.myLike != null;
     isRecorded = widget.myRecord != null;
+    _loadLikeCount();
+  }
+
+  Future<void> _loadLikeCount() async {
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) return;
+      final response = await _likeService.getLikeCount(
+        widget.sharedRoute.sharedRouteId,
+        token,
+      );
+      if (mounted) {
+        setState(() {
+          _likeCount = response.data;
+        });
+      }
+    } catch (e) {
+      debugPrint("Like count error: $e");
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -64,6 +91,11 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     setState(() {
       isLiked = !isLiked;
+      if (isLiked) {
+        _likeCount++;
+      } else {
+        _likeCount--;
+      }
     });
     widget.onChanged?.call();
   }
@@ -105,7 +137,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
         token,
       );
       setState(() {
-        comments = response.data ?? [];
+        comments = response.data;
         isLoadingComments = false;
       });
     } catch (e) {
@@ -123,7 +155,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       token,
     );
 
-    final sortedComments = _sortComments(response.data ?? []);
+    final sortedComments = _sortComments(response.data);
 
     if (!mounted) return;
 
@@ -159,7 +191,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                 const Divider(),
 
                 Expanded(
-                  child: response.data == null || response.data!.isEmpty
+                  child: response.data.isEmpty
                       ? const Center(child: Text("Henüz yorum yapılmamış."))
                       : ListView.builder(
                           controller: scrollController,
@@ -189,10 +221,14 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: Colors.orange.shade100,
-                                    child: Text(comment.userId.toString()[0]),
+                                    child: Text(
+                                      comment.username.isNotEmpty
+                                          ? comment.username[0].toUpperCase()
+                                          : "?",
+                                    ),
                                   ),
                                   title: Text(
-                                    "Kullanıcı ${comment.userId}${isReply ? ' (Yanıtladı)' : ''}",
+                                    "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: isReply ? 12 : 13,
@@ -217,8 +253,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                                 comment.parentCommentId ??
                                                 comment.commentId;
 
-                                            selectedUsername =
-                                                "Kullanıcı ${comment.userId}";
+                                            selectedUsername = comment.username;
                                           });
                                         },
                                         child: const Text(
@@ -369,6 +404,134 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     return sorted;
   }
 
+  Future<void> _goToEditPage() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditSharedRoutePage(sharedRoute: widget.sharedRoute),
+      ),
+    );
+
+    if (result == true) {
+      widget.onChanged?.call();
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final bool? approved = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Paylaşımı Sil"),
+        content: const Text(
+          "Bu paylaşımı silmek istediğine emin misin? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("İptal"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+
+    if (approved != true) return;
+
+    final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
+
+    await _sharedRouteService.deleteSharedRoute(
+      widget.sharedRoute.sharedRouteId,
+      token,
+    );
+
+    widget.onChanged?.call();
+
+    if (widget.isDetail && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  void _showLikesSheet() async {
+    final token = await _storage.read(key: "auth_token");
+    if (token == null) return;
+
+    final response = await _likeService.getLikesByRoute(
+      widget.sharedRoute.sharedRouteId,
+      token,
+    );
+    final likers = response.data;
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const Text(
+                "Beğenenler",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const Divider(),
+              Expanded(
+                child: likers.isEmpty
+                    ? const Center(child: Text("Henüz beğenen kimse yok."))
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: likers.length,
+                        itemBuilder: (context, index) {
+                          final liker = likers[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.red[100],
+                              child: Text(
+                                liker.username.isNotEmpty
+                                    ? liker.username[0].toUpperCase()
+                                    : "?",
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            title: Text(
+                              liker.username,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final createdAt = DateFormat(
@@ -397,8 +560,25 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _UserChip(username: widget.sharedRoute.username),
-                Icon(Icons.more_vert, color: Colors.grey[700]),
+                UserChip(username: widget.sharedRoute.username),
+                if (widget.isOwner)
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: Colors.grey[700]),
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _goToEditPage();
+                      } else if (value == 'delete') {
+                        _confirmDelete();
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'edit', child: Text("Düzenle")),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text("Sil", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
               ],
             ),
 
@@ -469,6 +649,25 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             ),
 
             const SizedBox(height: 12),
+
+            /// STATS
+            if (_likeCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: GestureDetector(
+                  onTap: _showLikesSheet,
+                  child: Text(
+                    "$_likeCount beğeni",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ),
+
+            const Divider(height: 1),
+            const SizedBox(height: 4),
 
             /// ACTIONS
             Row(
@@ -579,36 +778,6 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _UserChip extends StatelessWidget {
-  final String username;
-  const _UserChip({required this.username});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade600,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.person, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            username,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

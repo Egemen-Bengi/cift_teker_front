@@ -38,62 +38,60 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadEvents() async {
-  final token = await _storage.read(key: "auth_token");
-  _token = token;
-  if (!mounted) return;
-
-  if (token == null || token.isEmpty) {
+    final token = await _storage.read(key: "auth_token");
+    _token = token;
     if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-      _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
-      _dataLoaded = true;
-    });
-    return;
+
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _futureMyEvents = Future.error("Kullanıcı doğrulaması başarısız.");
+        _dataLoaded = true;
+      });
+      return;
+    }
+
+    try {
+      final allEventsResponse = await _eventService.getAllGroupEvents(token);
+      if (!mounted) return;
+
+      final myEventsResponse = await _eventService.getMyGroupEvents(token);
+      if (!mounted) return;
+
+      final myEventIds = myEventsResponse.data
+          .map((e) => e.groupEventId)
+          .toSet();
+
+      final filteredAllEvents = allEventsResponse.data
+          .where((e) => !myEventIds.contains(e.groupEventId))
+          .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.value(
+          ApiResponse(
+            data: filteredAllEvents,
+            message: "Tüm etkinlikler yüklendi",
+          ),
+        );
+        _futureMyEvents = Future.value(
+          ApiResponse(
+            data: myEventsResponse.data,
+            message: "Benim etkinliklerim yüklendi",
+          ),
+        );
+        _dataLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _futureAllEvents = Future.error("Hata oluştu: $e");
+        _futureMyEvents = Future.error("Hata oluştu: $e");
+        _dataLoaded = true;
+      });
+    }
   }
-
-  try {
-    final allEventsResponse =
-        await _eventService.getAllGroupEvents(token);
-    if (!mounted) return;
-
-    final myEventsResponse =
-        await _eventService.getMyGroupEvents(token);
-    if (!mounted) return;
-
-    final myEventIds =
-        myEventsResponse.data.map((e) => e.groupEventId).toSet();
-
-    final filteredAllEvents = allEventsResponse.data
-        .where((e) => !myEventIds.contains(e.groupEventId))
-        .toList();
-
-    if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.value(
-        ApiResponse(
-          data: filteredAllEvents,
-          message: "Tüm etkinlikler yüklendi",
-        ),
-      );
-      _futureMyEvents = Future.value(
-        ApiResponse(
-          data: myEventsResponse.data,
-          message: "Benim etkinliklerim yüklendi",
-        ),
-      );
-      _dataLoaded = true;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    setState(() {
-      _futureAllEvents = Future.error("Hata oluştu: $e");
-      _futureMyEvents = Future.error("Hata oluştu: $e");
-      _dataLoaded = true;
-    });
-  }
-}
-
 
   Widget _buildCityFilter({required bool isAllTab}) {
     final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
@@ -191,44 +189,79 @@ class _HomePageState extends State<HomePage>
     Future<ApiResponse<List<GroupEventResponse>>> future, {
     required bool isAllTab,
   }) {
-    return FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return RefreshIndicator(
+      onRefresh: _loadEvents,
+      color: Colors.purple.shade600,
+      child: FutureBuilder<ApiResponse<List<GroupEventResponse>>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        if (snapshot.hasError) {
-          return Center(child: Text("Hata oluştu: ${snapshot.error}"));
-        }
+          if (snapshot.hasError) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                Center(child: Text("Hata oluştu: ${snapshot.error}")),
+              ],
+            );
+          }
 
-        if (snapshot.data == null || snapshot.data!.data.isEmpty) {
-          return const Center(child: Text("Hiç etkinlik bulunamadı"));
-        }
+          if (snapshot.data == null || snapshot.data!.data.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                const Center(child: Text("Hiç etkinlik bulunamadı")),
+              ],
+            );
+          }
 
-        final now = DateTime.now();
-        final events = List<GroupEventResponse>.from(snapshot.data!.data)
-          ..removeWhere((event) => event.startDateTime.isBefore(now))
-          ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+          final now = DateTime.now();
+          final events = List<GroupEventResponse>.from(snapshot.data!.data)
+            ..removeWhere((event) {
+              final status = event.status?.toUpperCase();
+              final isExpired = event.endDateTime.isBefore(now);
 
-        final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
-        if (selectedCity != null) {
-          events.removeWhere(
-            (event) => event.city?.toUpperCase().trim() != selectedCity.trim(),
+              if (status == 'COMPLETED') return true;
+              if (status == 'PENDING' && isExpired) return true;
+              return false;
+            })
+            ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+          final selectedCity = isAllTab ? _selectedCityAll : _selectedCityMy;
+          if (selectedCity != null) {
+            events.removeWhere(
+              (event) =>
+                  event.city?.toUpperCase().trim() != selectedCity.trim(),
+            );
+          }
+
+          if (events.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                const Center(child: Text("Bu kriterlerde etkinlik yok")),
+              ],
+            );
+          }
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              return EventCard(
+                event: events[index],
+                token: _token,
+                onUpdated: () => _loadEvents(),
+              );
+            },
           );
-        }
-
-        if (events.isEmpty) {
-          return const Center(child: Text("Bu kriterlerde etkinlik yok"));
-        }
-
-        return ListView.builder(
-          itemCount: events.length,
-          itemBuilder: (context, index) {
-            return EventCard(event: events[index], token: _token);
-          },
-        );
-      },
+        },
+      ),
     );
   }
 
@@ -240,10 +273,6 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    if (!_dataLoaded) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       appBar: CustomAppBar(
         title: "Çift Teker",
@@ -255,27 +284,29 @@ class _HomePageState extends State<HomePage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          Column(
-            children: [
-              _buildCityFilter(isAllTab: true),
-              Expanded(
-                child: _buildEventList(_futureAllEvents, isAllTab: true),
-              ),
-            ],
-          ),
-          Column(
-            children: [
-              _buildCityFilter(isAllTab: false),
-              Expanded(
-                child: _buildEventList(_futureMyEvents, isAllTab: false),
-              ),
-            ],
-          ),
-        ],
-      ),
+      body: !_dataLoaded
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                Column(
+                  children: [
+                    _buildCityFilter(isAllTab: true),
+                    Expanded(
+                      child: _buildEventList(_futureAllEvents, isAllTab: true),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    _buildCityFilter(isAllTab: false),
+                    Expanded(
+                      child: _buildEventList(_futureMyEvents, isAllTab: false),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }

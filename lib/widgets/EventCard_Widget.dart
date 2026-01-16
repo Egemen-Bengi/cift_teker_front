@@ -1,32 +1,37 @@
+import 'package:cift_teker_front/components/UserChip.dart';
 import 'package:cift_teker_front/screens/GroupEvent/event_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/responses/groupEvent_response.dart';
-import '../models/responses/groupEventParticipant_response.dart';
-import '../services/groupEventParticipant_service.dart';
 
 class EventCard extends StatelessWidget {
   final GroupEventResponse event;
   final String? token;
 
-  const EventCard({super.key, required this.event, this.token});
+  final VoidCallback? onUpdated;
+
+  const EventCard({super.key, required this.event, this.token, this.onUpdated});
 
   @override
   Widget build(BuildContext context) {
-    
     final start = DateFormat('dd MMM yyyy, HH:mm').format(event.startDateTime);
     final end = DateFormat('dd MMM yyyy, HH:mm').format(event.endDateTime);
+
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final updatedEvent = await Navigator.push<GroupEventResponse>(
           context,
           MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
         );
+
+        if (updatedEvent != null && onUpdated != null) {
+          onUpdated!();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white, 
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -45,32 +50,10 @@ class EventCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade600,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person,
-                            size: 16, color: Colors.white),
-                        const SizedBox(width: 6),
-                        Text(
-                          event.username,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  UserChip(username: event.username),
+                  Icon(Icons.more_vert, color: Colors.grey[700]),
                 ],
               ),
-
               const SizedBox(height: 14),
 
               /// TITLE
@@ -88,16 +71,16 @@ class EventCard extends StatelessWidget {
               /// DATE RANGE
               Row(
                 children: [
-                  Icon(Icons.calendar_today,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       "$start — $end",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
                   ),
                 ],
@@ -108,8 +91,11 @@ class EventCard extends StatelessWidget {
               /// LOCATION
               Row(
                 children: [
-                  Icon(Icons.location_on_outlined,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -130,53 +116,26 @@ class EventCard extends StatelessWidget {
               if (event.description != null)
                 Text(
                   event.description!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[800],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[800]),
                 ),
 
               const SizedBox(height: 12),
 
-              /// PARTICIPANTS
+              /// PARTICIPANTS (SENİN KODUN – DEĞİŞMEDİ)
               Row(
                 children: [
-                  Icon(Icons.people_alt_outlined,
-                      size: 18, color: Colors.orange.shade700),
+                  Icon(
+                    Icons.people_alt_outlined,
+                    size: 18,
+                    color: Colors.orange.shade700,
+                  ),
                   const SizedBox(width: 6),
-                  FutureBuilder<List<GroupEventParticipantResponse>>(
-                    future: GroupEventParticipantService()
-                        .getParticipants(event.groupEventId, token),
-                    builder: (context, snapshot) {
-                      String display;
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        display = '...';
-                      } else if (snapshot.hasError) {
-                        debugPrint('getParticipants error: ${snapshot.error}');
-                        final err = snapshot.error.toString();
-                        if (err.contains('403') || err.toLowerCase().contains('forbidden')) {
-                          display = 'Giriş gerekli';
-                        } else {
-                          final count = snapshot.data?.length ?? 0;
-                          display = '$count';
-                        }
-                      } else {
-                        final count = snapshot.data?.length ?? 0;
-                        display = '$count';
-                      }
-                      return Text(
-                        "$display / ${event.maxParticipants} katılımcı",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                        ),
-                      );
-                    },
+                  Text(
+                    "${event.currentParticipants ?? 0} / ${event.maxParticipants} katılımcı",
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 8),
             ],
           ),
         ),
