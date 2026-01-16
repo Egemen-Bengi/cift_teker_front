@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cift_teker_front/components/FullScreenImagePage.dart';
 import 'package:cift_teker_front/core/models/api_response.dart';
 import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
 import 'package:cift_teker_front/models/requests/updateProfileImage_request.dart';
@@ -381,27 +382,44 @@ class _ProfilePageState extends State<ProfilePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 40),
-                        GestureDetector(
-                          onTap: () => _showProfileImageOptions(user),
-                          child: Stack(
-                            children: [
-                              Container(
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FullScreenImagePage(
+                                      imageUrl: user.profileImage,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
                                 ),
-                                child: CircleAvatar(
-                                  radius: 50,
-                                  backgroundImage: user.profileImage != null
-                                      ? NetworkImage(user.profileImage!)
-                                      : const AssetImage("assets/ciftTeker.png")
-                                            as ImageProvider,
+                                child: Hero(
+                                  tag: 'profile_image_hero',
+                                  child: CircleAvatar(
+                                    radius: 50,
+                                    backgroundImage: user.profileImage != null
+                                        ? NetworkImage(user.profileImage!)
+                                        : const AssetImage(
+                                                "assets/ciftTeker.png",
+                                              )
+                                              as ImageProvider,
+                                  ),
                                 ),
                               ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () => _showProfileImageOptions(user),
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: const BoxDecoration(
@@ -415,9 +433,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+
                         const SizedBox(height: 10),
                         Text(
                           "${user.name} ${user.surname}",
