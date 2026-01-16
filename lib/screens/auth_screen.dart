@@ -1,7 +1,6 @@
 // ignore_for_file: unnecessary_null_comparison, use_build_context_synchronously, avoid_print, curly_braces_in_flow_control_structures, unnecessary_brace_in_string_interps, unused_local_variable
 
 import 'package:cift_teker_front/models/requests/login_request.dart';
-import 'package:cift_teker_front/models/requests/updatePassword_request.dart';
 import 'package:cift_teker_front/services/login_service.dart';
 import 'package:cift_teker_front/models/requests/user_request.dart';
 import 'package:cift_teker_front/screens/main_navigation.dart';
@@ -201,126 +200,119 @@ class _AuthPageState extends State<AuthPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // loading kapat
+      Navigator.pop(context);
 
       _showAlertDialog("Hata", "Giriş yapılırken bir hata oluştu");
     }
   }
 
 
-  // Şifremi unuttum dialog'u: token + eski şifre + yeni şifre alıp LoginService.updatePassword çağırır
   Future<void> _showForgotPasswordDialog() async {
-    final TextEditingController tokenController = TextEditingController();
-    final TextEditingController oldPassController = TextEditingController();
-    final TextEditingController newPassController = TextEditingController();
-    final TextEditingController confirmController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    bool obscureNewPassword = true;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Şifre Güncelle"),
-        content: SingleChildScrollView(
-          child: Column(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text("Şifremi Unuttum"),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "Tokeniniz varsa girin. Eski şifrenizi ve yeni şifrenizi girin.",
-                style: TextStyle(fontSize: 13),
+                "Hesabınızın bağlı olduğu email adresini ve yeni şifrenizi giriniz",
+                style: TextStyle(fontSize: 14),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
-                controller: tokenController,
-                decoration: const InputDecoration(labelText: "Token / Kod"),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: oldPassController,
-                decoration: const InputDecoration(labelText: "Eski Şifre"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: newPassController,
-                decoration: const InputDecoration(labelText: "Yeni Şifre"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmController,
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                  labelText: "Yeni Şifre (Tekrar)",
+                  labelText: "Email",
                 ),
-                obscureText: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newPasswordController,
+                obscureText: obscureNewPassword,
+                decoration: InputDecoration(
+                  labelText: "Yeni Şifre",
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscureNewPassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setDialogState(() {
+                        obscureNewPassword = !obscureNewPassword;
+                      });
+                    },
+                  ),
+                ),
               ),
             ],
           ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                final newPassword = newPasswordController.text.trim();
+
+                if (email.isEmpty || newPassword.isEmpty) {
+                  _showAlertDialog(
+                    "Hata",
+                    "Email ve yeni şifre alanları boş olamaz.",
+                  );
+                  return;
+                }
+
+                if (!_isValidEmail(email)) {
+                  _showAlertDialog("Hata", "Geçerli bir email giriniz.");
+                  return;
+                }
+
+                if (!_isValidPassword(newPassword)) {
+                  _showAlertDialog(
+                    "Hata",
+                    "Şifre en az 5 karakter olmalıdır.",
+                  );
+                  return;
+                }
+                /*
+                try {
+                  final loginService = LoginService();
+
+                  await loginService.forgotPassword(
+                    email: email,
+                    newPassword: newPassword,
+                  );
+
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  _showAlertDialog(
+                    "Başarılı",
+                    "Yeni şifrenizi email adresinizden onaylayınız.",
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  _showAlertDialog(
+                    "Hata",
+                    "Şifre değiştirme işlemi başarısız.",
+                  );
+                }*/
+              Navigator.pop(context);
+              },
+              child: const Text("Gönder"),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final token = tokenController.text.trim();
-              final oldPass = oldPassController.text;
-              final newPass = newPassController.text;
-              final confirm = confirmController.text;
-
-              if (token.isEmpty) {
-                _showAlertDialog("Hata", "Token boş olamaz.");
-                return;
-              }
-              if (oldPass.isEmpty) {
-                _showAlertDialog("Hata", "Eski şifre boş olamaz.");
-                return;
-              }
-              if (newPass.isEmpty || confirm.isEmpty) {
-                _showAlertDialog("Hata", "Yeni şifre alanları boş olamaz.");
-                return;
-              }
-              if (newPass != confirm) {
-                _showAlertDialog("Hata", "Şifreler eşleşmiyor.");
-                return;
-              }
-              if (!_isValidPassword(newPass)) {
-                _showAlertDialog(
-                  "Hata",
-                  "Şifre en az 5 karakter olmalı.",
-                );
-                return;
-              }
-
-              try {
-                final loginService = LoginService();
-                final req = UpdatePasswordRequest(
-                  oldPassword: oldPass,
-                  newPassword: newPass,
-                );
-                await loginService.updatePassword(req, token);
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                _showAlertDialog(
-                  "Başarılı",
-                  "Şifreniz başarıyla güncellendi.",
-                );
-              } catch (e) {
-                if (!mounted) return;
-                _showAlertDialog(
-                  "Hata",
-                  "Şifre güncelleme başarısız",
-                );
-              }
-            },
-            child: const Text("Güncelle"),
-          ),
-        ],
       ),
     );
   }
 
-  // Focus ve rule state ekleyin
+
+
   final FocusNode _usernameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
