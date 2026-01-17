@@ -23,11 +23,19 @@ class _RecordPageState extends State<RecordPage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   late Future<List<SharedRouteResponse>> _futureRecordedRoutes;
+  List<SharedRouteResponse>? _cachedRoutes;
+  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
     super.initState();
     _futureRecordedRoutes = _loadRecordedRoutes();
+    _futureRecordedRoutes.then((routes) {
+      if (mounted) setState(() {
+        _cachedRoutes = routes;
+        _hasLoadedOnce = true;
+      });
+    });
   }
 
   Future<List<SharedRouteResponse>> _loadRecordedRoutes() async {
@@ -55,8 +63,15 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Future<void> _refresh() async {
+    final f = _loadRecordedRoutes();
     setState(() {
-      _futureRecordedRoutes = _loadRecordedRoutes();
+      _futureRecordedRoutes = f;
+    });
+    _futureRecordedRoutes.then((routes) {
+      if (mounted) setState(() {
+        _cachedRoutes = routes;
+        _hasLoadedOnce = true;
+      });
     });
     await _futureRecordedRoutes;
   }
@@ -75,15 +90,15 @@ class _RecordPageState extends State<RecordPage> {
         child: FutureBuilder<List<SharedRouteResponse>>(
           future: _futureRecordedRoutes,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting && !_hasLoadedOnce) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (snapshot.hasError && !_hasLoadedOnce) {
               return Center(child: Text("Hata: ${snapshot.error}"));
             }
 
-            final routes = snapshot.data ?? [];
+            final routes = snapshot.hasData ? snapshot.data! : (_cachedRoutes ?? []);
 
             if (routes.isEmpty) {
               return const Center(

@@ -23,11 +23,19 @@ class _LikePageState extends State<LikePage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   late Future<List<SharedRouteResponse>> _futureLikedRoutes;
+  List<SharedRouteResponse>? _cachedRoutes;
+  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
     super.initState();
     _futureLikedRoutes = _loadLikedRoutes();
+    _futureLikedRoutes.then((routes) {
+      if (mounted) setState(() {
+        _cachedRoutes = routes;
+        _hasLoadedOnce = true;
+      });
+    });
   }
 
   Future<List<SharedRouteResponse>> _loadLikedRoutes() async {
@@ -63,23 +71,30 @@ class _LikePageState extends State<LikePage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
+          final f = _loadLikedRoutes();
           setState(() {
-            _futureLikedRoutes = _loadLikedRoutes();
+            _futureLikedRoutes = f;
+          });
+          _futureLikedRoutes.then((routes) {
+            if (mounted) setState(() {
+              _cachedRoutes = routes;
+              _hasLoadedOnce = true;
+            });
           });
           await _futureLikedRoutes;
         },
         child: FutureBuilder<List<SharedRouteResponse>>(
           future: _futureLikedRoutes,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting && !_hasLoadedOnce) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (snapshot.hasError && !_hasLoadedOnce) {
               return Center(child: Text("Hata: ${snapshot.error}"));
             }
 
-            final routes = snapshot.data ?? [];
+            final routes = snapshot.hasData ? snapshot.data! : (_cachedRoutes ?? []);
 
             if (routes.isEmpty) {
               return const Center(
