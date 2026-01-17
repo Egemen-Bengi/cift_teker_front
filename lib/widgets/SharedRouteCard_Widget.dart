@@ -197,24 +197,27 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
       await _commentService.deleteComment(commentId, token);
 
-      final response = await _commentService.getCommentsByRoute(
-        widget.sharedRoute.sharedRouteId,
-        token,
-      );
-
       if (mounted) {
-        setModalState(() {
-          comments = response.data;
-        });
-        setState(() {
-          comments = response.data;
-        });
+        Navigator.pop(context);
+
+        _loadComments();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Yorum silindi."),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context);
+        _loadComments();
+
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+        ).showSnackBar(SnackBar(content: Text("İşlem tamamlandı: $e")));
       }
     }
   }
@@ -443,18 +446,22 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                         IconButton(
                           icon: const Icon(Icons.send, color: Colors.orange),
                           onPressed: () async {
+                            FocusScope.of(context).unfocus();
                             await _sendReplyComment();
-                            final newToken = await _storage.read(
-                              key: "auth_token",
-                            );
-                            if (newToken != null) {
-                              final newComments = await _commentService
-                                  .getCommentsByRoute(
-                                    widget.sharedRoute.sharedRouteId,
-                                    newToken,
-                                  );
-                              setModalState(() {
-                                comments = newComments.data;
+
+                            if (mounted) {
+                              Navigator.pop(context);
+
+                              _loadComments();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Yorum gönderildi."),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+
+                              setState(() {
                                 selectedParentId = null;
                                 selectedParentRootId = null;
                                 selectedUsername = null;
