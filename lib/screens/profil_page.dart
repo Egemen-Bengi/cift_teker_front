@@ -336,334 +336,351 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: FutureBuilder<ApiResponse<UserResponse>>(
-        future: _futureUser,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || snapshot.data == null) {
-            return Center(child: Text("Hata: ${snapshot.error ?? "Veri yok"}"));
-          }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) {
+          return;
+        }
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          context.findAncestorStateOfType<MainNavigationState>()?.onItemTapped(
+            0,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        body: FutureBuilder<ApiResponse<UserResponse>>(
+          future: _futureUser,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return Center(
+                child: Text("Hata: ${snapshot.error ?? "Veri yok"}"),
+              );
+            }
 
-          final user = snapshot.data!.data;
+            final user = snapshot.data!.data;
 
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 220.0,
-                floating: false,
-                pinned: true,
-                backgroundColor: Colors.orange,
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    context
-                        .findAncestorStateOfType<MainNavigationState>()
-                        ?.onItemTapped(0);
-                  },
-                ),
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.orange.shade400,
-                          Colors.orange.shade800,
-                        ],
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 220.0,
+                  floating: false,
+                  pinned: true,
+                  backgroundColor: Colors.orange,
+                  elevation: 0,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () {
+                      context
+                          .findAncestorStateOfType<MainNavigationState>()
+                          ?.onItemTapped(0);
+                    },
+                  ),
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.orange.shade400,
+                            Colors.orange.shade800,
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 40),
-                        Stack(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FullScreenImagePage(
-                                      imageUrl: user.profileImage,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 40),
+                          Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FullScreenImagePage(
+                                        imageUrl: user.profileImage,
+                                      ),
                                     ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
                                   ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Hero(
-                                  tag: 'profile_image_hero',
-                                  child: CircleAvatar(
-                                    radius: 50,
-                                    backgroundImage: user.profileImage != null
-                                        ? NetworkImage(user.profileImage!)
-                                        : const AssetImage(
-                                                "assets/ciftTeker.png",
-                                              )
-                                              as ImageProvider,
+                                  child: Hero(
+                                    tag: 'profile_image_hero',
+                                    child: CircleAvatar(
+                                      radius: 50,
+                                      backgroundImage: user.profileImage != null
+                                          ? NetworkImage(user.profileImage!)
+                                          : const AssetImage(
+                                                  "assets/ciftTeker.png",
+                                                )
+                                                as ImageProvider,
+                                    ),
                                   ),
                                 ),
                               ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: () => _showProfileImageOptions(user),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+                          Text(
+                            "${user.name} ${user.surname}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: GestureDetector(
-                                onTap: () => _showProfileImageOptions(user),
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.blue,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
+                          ),
+                          Text(
+                            user.email,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _buildStatCard(
+                              "Beğeniler",
+                              Icons.favorite,
+                              Colors.red,
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LikePage(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _buildStatCard(
+                              "Yorumlar",
+                              Icons.chat_bubble,
+                              Colors.blue,
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CommentPage(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _buildStatCard(
+                              "Kaydedilen",
+                              Icons.bookmark,
+                              Colors.orange,
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RecordPage(),
                                 ),
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: 10),
-                        Text(
-                          "${user.name} ${user.surname}",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          user.email,
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Hesap Ayarları",
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
+                        const SizedBox(height: 12),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSettingsTile(
+                                icon: Icons.person,
+                                title: "Kullanıcı Adı",
+                                value: user.username,
+                                onTap: () => _genericUpdateDialog(
+                                  title: "Kullanıcı Adı Değiştir",
+                                  label: "Yeni Ad",
+                                  initialValue: user.username,
+                                  onUpdate: (val, token) =>
+                                      _userService.updateUsername(
+                                        UpdateUsernameRequest(newUsername: val),
+                                        token,
+                                      ),
+                                ),
+                              ),
+                              const Divider(height: 1, indent: 60),
+                              _buildSettingsTile(
+                                icon: Icons.email,
+                                title: "E-posta",
+                                value: user.email,
+                                onTap: () => _genericUpdateDialog(
+                                  title: "E-posta Değiştir",
+                                  label: "Yeni E-posta",
+                                  initialValue: user.email,
+                                  onUpdate: (val, token) =>
+                                      _userService.updateEmail(
+                                        UpdateEmailRequest(newEmail: val),
+                                        token,
+                                      ),
+                                ),
+                              ),
+                              const Divider(height: 1, indent: 60),
+                              _buildSettingsTile(
+                                icon: Icons.phone,
+                                title: "Telefon",
+                                value: user.phoneNumber ?? "Belirtilmemiş",
+                                onTap: () => _genericUpdateDialog(
+                                  title: "Telefon Değiştir",
+                                  label: "Yeni Numara",
+                                  initialValue: user.phoneNumber ?? "",
+                                  onUpdate: (val, token) =>
+                                      _userService.updatePhoneNumber(
+                                        UpdatePhoneNumberRequest(
+                                          newPhoneNumber: val,
+                                        ),
+                                        token,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+                        const Text(
+                          "Güvenlik",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.lock,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                title: const Text(
+                                  "Şifre Değiştir",
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.grey,
+                                ),
+                                onTap: _updatePassword,
+                              ),
+                              const Divider(height: 1, indent: 60),
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.logout,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                title: const Text(
+                                  "Çıkış Yap",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                onTap: _logout,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 50),
                       ],
                     ),
                   ),
                 ),
-              ),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _buildStatCard(
-                            "Beğeniler",
-                            Icons.favorite,
-                            Colors.red,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LikePage(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          _buildStatCard(
-                            "Yorumlar",
-                            Icons.chat_bubble,
-                            Colors.blue,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CommentPage(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          _buildStatCard(
-                            "Kaydedilen",
-                            Icons.bookmark,
-                            Colors.orange,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RecordPage(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Text(
-                        "Hesap Ayarları",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            _buildSettingsTile(
-                              icon: Icons.person,
-                              title: "Kullanıcı Adı",
-                              value: user.username,
-                              onTap: () => _genericUpdateDialog(
-                                title: "Kullanıcı Adı Değiştir",
-                                label: "Yeni Ad",
-                                initialValue: user.username,
-                                onUpdate: (val, token) =>
-                                    _userService.updateUsername(
-                                      UpdateUsernameRequest(newUsername: val),
-                                      token,
-                                    ),
-                              ),
-                            ),
-                            const Divider(height: 1, indent: 60),
-                            _buildSettingsTile(
-                              icon: Icons.email,
-                              title: "E-posta",
-                              value: user.email,
-                              onTap: () => _genericUpdateDialog(
-                                title: "E-posta Değiştir",
-                                label: "Yeni E-posta",
-                                initialValue: user.email,
-                                onUpdate: (val, token) =>
-                                    _userService.updateEmail(
-                                      UpdateEmailRequest(newEmail: val),
-                                      token,
-                                    ),
-                              ),
-                            ),
-                            const Divider(height: 1, indent: 60),
-                            _buildSettingsTile(
-                              icon: Icons.phone,
-                              title: "Telefon",
-                              value: user.phoneNumber ?? "Belirtilmemiş",
-                              onTap: () => _genericUpdateDialog(
-                                title: "Telefon Değiştir",
-                                label: "Yeni Numara",
-                                initialValue: user.phoneNumber ?? "",
-                                onUpdate: (val, token) =>
-                                    _userService.updatePhoneNumber(
-                                      UpdatePhoneNumberRequest(
-                                        newPhoneNumber: val,
-                                      ),
-                                      token,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Text(
-                        "Güvenlik",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.lock,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                              title: const Text(
-                                "Şifre Değiştir",
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Colors.grey,
-                              ),
-                              onTap: _updatePassword,
-                            ),
-                            const Divider(height: 1, indent: 60),
-                            ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.logout,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              title: const Text(
-                                "Çıkış Yap",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              onTap: _logout,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 50),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
