@@ -1,6 +1,7 @@
 import 'package:cift_teker_front/cities/turkish_cities.dart';
 import 'package:cift_teker_front/formatter/time_input_formatter.dart';
 import 'package:cift_teker_front/models/requests/groupEvent_request.dart';
+import 'package:cift_teker_front/screens/main_navigation.dart';
 import 'package:cift_teker_front/services/groupEvent_service.dart';
 import 'package:cift_teker_front/widgets/CustomAppBar_Widget.dart';
 import 'package:flutter/material.dart';
@@ -370,17 +371,6 @@ class _EventCreatePageState extends State<EventCreatePage> {
                               content: Text("Lütfen tüm alanları doldurun."),
                             ),
                           );
-                          print('title: ${titleController.text}');
-                          print('description: ${descriptionController.text}');
-                          print(
-                            'startLocation: ${startLocationController.text}',
-                          );
-                          print('endLocation: ${endLocationController.text}');
-                          print('selectedDate: ${selectedDate}');
-                          print('startTime: ${startTimeController.text}');
-                          print('endTime: ${endTimeController.text}');
-                          print('capacity: ${capacityController.text}');
-                          print('city: ${selectedCity}');
                           return;
                         }
 
@@ -438,21 +428,128 @@ class _EventCreatePageState extends State<EventCreatePage> {
                           final response = await EventService()
                               .createGroupEvent(request, token!);
 
-                          if (response == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Etkinlik başarıyla oluşturuldu!",
-                                ),
-                              ),
+                          if (response.httpStatus == "OK" ||
+                              response.httpStatus == "CREATED" ||
+                              response.httpStatus == "200") {
+                            if (!mounted) return;
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return Center(
+                                  child: SingleChildScrollView(
+                                    child: Dialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      elevation: 0,
+                                      backgroundColor: Colors.transparent,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(30),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.1,
+                                              ),
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 10),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 80,
+                                              height: 80,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade100,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.check_circle,
+                                                color: Colors.green.shade700,
+                                                size: 50,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 20),
+                                            Text(
+                                              response.message,
+                                              style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            const Text(
+                                              "Etkinliğiniz başarıyla oluşturuldu. Ana sayfaya yönlendiriliyorsunuz.",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 25),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  Navigator.pushAndRemoveUntil(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const MainNavigation(),
+                                                    ),
+                                                    (route) => false,
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.orangeAccent,
+                                                  foregroundColor: Colors.white,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 12,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  "Ana Sayfaya Dön",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             );
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(builder: (context) => SocialMediaPage()),
-                            // );
                           } else {
+                            if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(response.message)),
+                              SnackBar(
+                                content: Text("Hata: ${response.message}"),
+                              ),
                             );
                           }
                         } catch (e) {
