@@ -110,15 +110,17 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     await _likeService.toggleLike(widget.sharedRoute.sharedRouteId, token);
 
-    setState(() {
-      isLiked = !isLiked;
-      if (isLiked) {
-        _likeCount++;
-      } else {
-        _likeCount--;
-      }
-    });
-    widget.onChanged?.call();
+    if (mounted) {
+      setState(() {
+        isLiked = !isLiked;
+        if (isLiked) {
+          _likeCount++;
+        } else {
+          _likeCount--;
+        }
+      });
+      widget.onChanged?.call();
+    }
   }
 
   Future<void> _toggleRecord() async {
@@ -127,10 +129,12 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     await _recordService.toggleRecord(widget.sharedRoute.sharedRouteId, token);
 
-    setState(() {
-      isRecorded = !isRecorded;
-    });
-    widget.onChanged?.call();
+    if (mounted) {
+      setState(() {
+        isRecorded = !isRecorded;
+      });
+      widget.onChanged?.call();
+    }
   }
 
   Future<void> _sendComment() async {
@@ -142,13 +146,16 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       "content": _commentController.text,
     }, token);
 
-    _commentController.clear();
-    setState(() {
-      showCommentBox = false;
-    });
+    if (mounted) {
+      _commentController.clear();
+      setState(() {
+        showCommentBox = false;
+      });
+    }
   }
 
   Future<void> _loadComments() async {
+    if (!mounted) return;
     setState(() => isLoadingComments = true);
     try {
       final token = await _storage.read(key: "auth_token");
@@ -157,12 +164,16 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
         widget.sharedRoute.sharedRouteId,
         token,
       );
-      setState(() {
-        comments = response.data;
-        isLoadingComments = false;
-      });
+      if (mounted) {
+        setState(() {
+          comments = response.data;
+          isLoadingComments = false;
+        });
+      }
     } catch (e) {
-      setState(() => isLoadingComments = false);
+      if (mounted) {
+        setState(() => isLoadingComments = false);
+      }
     }
   }
 
