@@ -304,11 +304,28 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                                   child: ListTile(
                                     leading: CircleAvatar(
                                       backgroundColor: Colors.orange.shade100,
-                                      child: Text(
-                                        comment.username.isNotEmpty
-                                            ? comment.username[0].toUpperCase()
-                                            : "?",
-                                      ),
+                                      backgroundImage:
+                                          (comment.profileImage != null &&
+                                              comment.profileImage!.isNotEmpty)
+                                          ? CachedNetworkImageProvider(
+                                              comment.profileImage!,
+                                            )
+                                          : null,
+
+                                      child:
+                                          (comment.profileImage != null &&
+                                              comment.profileImage!.isNotEmpty)
+                                          ? null
+                                          : Text(
+                                              comment.username.isNotEmpty
+                                                  ? comment.username[0]
+                                                        .toUpperCase()
+                                                  : "?",
+                                              style: TextStyle(
+                                                color: Colors.orange.shade900,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                     ),
                                     title: Text(
                                       "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",

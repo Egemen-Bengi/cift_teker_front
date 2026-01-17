@@ -6,6 +6,7 @@ class CommentResponse {
   final int? routeId;
   final int? sharedRouteId;
   final int? parentCommentId;
+  final String? profileImage;
   final DateTime createdAt;
 
   CommentResponse({
@@ -16,6 +17,7 @@ class CommentResponse {
     this.routeId,
     this.sharedRouteId,
     this.parentCommentId,
+    this.profileImage,
     required this.createdAt,
   });
 
@@ -28,6 +30,7 @@ class CommentResponse {
       routeId: json["routeId"],
       sharedRouteId: json["sharedRouteId"],
       parentCommentId: json["parentCommentId"],
+      profileImage: json["profileImage"],
       createdAt: DateTime.parse(json["createdAt"]),
     );
   }
