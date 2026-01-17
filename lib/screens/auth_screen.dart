@@ -207,112 +207,147 @@ class _AuthPageState extends State<AuthPage> {
   }
 
 
-  Future<void> _showForgotPasswordDialog() async {
+ Future<void> _showForgotPasswordDialog() async {
     final TextEditingController emailController = TextEditingController();
-    final TextEditingController newPasswordController = TextEditingController();
-    bool obscureNewPassword = true;
 
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Şifremi Unuttum"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Hesabınızın bağlı olduğu email adresini ve yeni şifrenizi giriniz",
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: "Email",
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: newPasswordController,
-                obscureText: obscureNewPassword,
-                decoration: InputDecoration(
-                  labelText: "Yeni Şifre",
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      obscureNewPassword ? Icons.visibility_off : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setDialogState(() {
-                        obscureNewPassword = !obscureNewPassword;
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ],
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Şifremi Unuttum"),
+        content: TextField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: "Email",
           ),
-          actions: [
-            ElevatedButton(
-              onPressed: () async {
-                final email = emailController.text.trim();
-                final newPassword = newPasswordController.text.trim();
-
-                if (email.isEmpty || newPassword.isEmpty) {
-                  _showAlertDialog(
-                    "Hata",
-                    "Email ve yeni şifre alanları boş olamaz.",
-                  );
-                  return;
-                }
-
-                if (!_isValidEmail(email)) {
-                  _showAlertDialog("Hata", "Geçerli bir email giriniz.");
-                  return;
-                }
-
-                if (!_isValidPassword(newPassword)) {
-                  _showAlertDialog(
-                    "Hata",
-                    "Şifre en az 5 karakter olmalıdır.",
-                  );
-                  return;
-                }
-                /*
-                try {
-                  final loginService = LoginService();
-
-                  await loginService.forgotPassword(
-                    email: email,
-                    newPassword: newPassword,
-                  );
-
-                  if (!mounted) return;
-                  Navigator.pop(context);
-                  _showAlertDialog(
-                    "Başarılı",
-                    "Yeni şifrenizi email adresinizden onaylayınız.",
-                  );
-                } catch (e) {
-                  if (!mounted) return;
-                  _showAlertDialog(
-                    "Hata",
-                    "Şifre değiştirme işlemi başarısız.",
-                  );
-                }*/
-              Navigator.pop(context);
-              },
-              child: const Text("Gönder"),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            child: const Text("Gönder"),
+            onPressed: () async {
+              final email = emailController.text.trim();
+
+              if (email.isEmpty || !_isValidEmail(email)) {
+                _showAlertDialog("Hata", "Geçerli bir email giriniz.");
+                return;
+              }
+
+              try {
+                await UserService().forgotPassword(email: email);
+
+                if (!context.mounted) return;
+                Navigator.pop(context);
+
+                _showResetPasswordDialog(email);
+              } catch (e) {
+                _showAlertDialog(
+                  "Hata",
+                  "Email gönderilemedi. Lütfen tekrar deneyin.$email",
+                );
+              }
+            },
+          ),
+        ],
       ),
     );
   }
 
+  Future<void> _showResetPasswordDialog(String email) async {
+    final TextEditingController codeController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
 
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Şifre Sıfırlama"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: TextEditingController(text: email),
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: "Email",
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Doğrulama Kodu",
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Yeni Şifre",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            child: const Text("Güncelle"),
+            onPressed: () async {
+              final code = codeController.text.trim();
+              final newPassword = passwordController.text.trim();
 
+              if (code.isEmpty || newPassword.isEmpty) {
+                _showAlertDialog(
+                  "Hata",
+                  "Tüm alanları doldurunuz.",
+                );
+                return;
+              }
+
+              if (!_isValidPassword(newPassword)) {
+                _showAlertDialog(
+                  "Hata",
+                  "Şifre en az 5 karakter olmalıdır.",
+                );
+                return;
+              }
+
+              try {
+                await UserService().resetPassword(
+                  email: email,
+                  code: code,
+                  newPassword: newPassword,
+                );
+
+                if (!context.mounted) return;
+                Navigator.pop(context);
+
+                _showAlertDialog(
+                  "Başarılı",
+                  "Şifreniz başarıyla güncellendi.",
+                );
+              } catch (e) {
+                _showAlertDialog(
+                  "Hata",
+                  "Şifre güncellenemedi. Kod hatalı veya süresi dolmuş olabilir.",
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+  
   final FocusNode _usernameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();

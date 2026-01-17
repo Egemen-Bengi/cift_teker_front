@@ -22,6 +22,8 @@ class _CommentPageState extends State<CommentPage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   late Future<List<SharedRouteResponse>> _futureCommentedRoutes;
+  List<SharedRouteResponse>? _cachedRoutes;
+  bool _hasLoadedOnce = false;
   int? _currentUserId;
 
   @override
@@ -29,6 +31,12 @@ class _CommentPageState extends State<CommentPage> {
     super.initState();
     _loadCurrentUser();
     _futureCommentedRoutes = _loadCommentedRoutes();
+    _futureCommentedRoutes.then((routes) {
+      if (mounted) setState(() {
+        _cachedRoutes = routes;
+        _hasLoadedOnce = true;
+      });
+    });
   }
 
   Future<void> _loadCurrentUser() async {
@@ -66,8 +74,15 @@ class _CommentPageState extends State<CommentPage> {
   }
 
   Future<void> _refresh() async {
+    final f = _loadCommentedRoutes();
     setState(() {
-      _futureCommentedRoutes = _loadCommentedRoutes();
+      _futureCommentedRoutes = f;
+    });
+    _futureCommentedRoutes.then((routes) {
+      if (mounted) setState(() {
+        _cachedRoutes = routes;
+        _hasLoadedOnce = true;
+      });
     });
     await _futureCommentedRoutes;
   }
@@ -86,11 +101,11 @@ class _CommentPageState extends State<CommentPage> {
         child: FutureBuilder<List<SharedRouteResponse>>(
           future: _futureCommentedRoutes,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting && !_hasLoadedOnce) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (snapshot.hasError && !_hasLoadedOnce) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
@@ -100,7 +115,7 @@ class _CommentPageState extends State<CommentPage> {
               );
             }
 
-            final routes = snapshot.data ?? [];
+            final routes = snapshot.hasData ? snapshot.data! : (_cachedRoutes ?? []);
 
             if (routes.isEmpty) {
               return const Center(
