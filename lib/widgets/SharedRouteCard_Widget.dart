@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/responses/sharedRoute_response.dart';
 
 class SharedRouteCard extends StatefulWidget {
@@ -56,6 +57,7 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
   final TextEditingController _commentController = TextEditingController();
 
   int _likeCount = 0;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -63,6 +65,25 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     isLiked = widget.myLike != null;
     isRecorded = widget.myRecord != null;
     _loadLikeCount();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token != null) {
+        final decoded = JwtDecoder.decode(token);
+        final int userId = decoded["userId"];
+
+        if (mounted) {
+          setState(() {
+            _currentUserId = userId;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Kullanıcı ID yüklenirken hata: $e");
+    }
   }
 
   Future<void> _loadLikeCount() async {
@@ -89,15 +110,17 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     await _likeService.toggleLike(widget.sharedRoute.sharedRouteId, token);
 
-    setState(() {
-      isLiked = !isLiked;
-      if (isLiked) {
-        _likeCount++;
-      } else {
-        _likeCount--;
-      }
-    });
-    widget.onChanged?.call();
+    if (mounted) {
+      setState(() {
+        isLiked = !isLiked;
+        if (isLiked) {
+          _likeCount++;
+        } else {
+          _likeCount--;
+        }
+      });
+      widget.onChanged?.call();
+    }
   }
 
   Future<void> _toggleRecord() async {
@@ -106,10 +129,12 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
 
     await _recordService.toggleRecord(widget.sharedRoute.sharedRouteId, token);
 
-    setState(() {
-      isRecorded = !isRecorded;
-    });
-    widget.onChanged?.call();
+    if (mounted) {
+      setState(() {
+        isRecorded = !isRecorded;
+      });
+      widget.onChanged?.call();
+    }
   }
 
   Future<void> _sendComment() async {
@@ -121,13 +146,16 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       "content": _commentController.text,
     }, token);
 
-    _commentController.clear();
-    setState(() {
-      showCommentBox = false;
-    });
+    if (mounted) {
+      _commentController.clear();
+      setState(() {
+        showCommentBox = false;
+      });
+    }
   }
 
   Future<void> _loadComments() async {
+    if (!mounted) return;
     setState(() => isLoadingComments = true);
     try {
       final token = await _storage.read(key: "auth_token");
@@ -136,12 +164,72 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
         widget.sharedRoute.sharedRouteId,
         token,
       );
-      setState(() {
-        comments = response.data;
-        isLoadingComments = false;
-      });
+      if (mounted) {
+        setState(() {
+          comments = response.data;
+          isLoadingComments = false;
+        });
+      }
     } catch (e) {
-      setState(() => isLoadingComments = false);
+      if (mounted) {
+        setState(() => isLoadingComments = false);
+      }
+    }
+  }
+
+  Future<void> _deleteMyComment(
+    int commentId,
+    StateSetter setModalState,
+  ) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Yorumu Sil"),
+        content: const Text("Bu yorumu silmek istediğine emin misin?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("İptal"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) return;
+
+      await _commentService.deleteComment(commentId, token);
+
+      if (mounted) {
+        Navigator.pop(context);
+
+        _loadComments();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Yorum silindi."),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        _loadComments();
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("İşlem tamamlandı: $e")));
+      }
     }
   }
 
@@ -149,13 +237,11 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
     final token = await _storage.read(key: "auth_token");
     if (token == null) return;
 
-    // Yorumları yükle
     final response = await _commentService.getCommentsByRoute(
       widget.sharedRoute.sharedRouteId,
       token,
     );
-
-    final sortedComments = _sortComments(response.data);
+    comments = response.data;
 
     if (!mounted) return;
 
@@ -164,200 +250,261 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, scrollController) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const Text(
-                  "Yorumlar",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const Divider(),
+        builder: (context, setModalState) {
+          final sortedComments = _sortComments(comments);
 
-                Expanded(
-                  child: response.data.isEmpty
-                      ? const Center(child: Text("Henüz yorum yapılmamış."))
-                      : ListView.builder(
-                          controller: scrollController,
-                          itemCount: sortedComments.length,
-                          itemBuilder: (context, index) {
-                            final comment = sortedComments[index];
-                            final isReply = comment.parentCommentId != null;
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                left: isReply ? 45.0 : 0.0,
-                                right: isReply ? 10.0 : 0.0,
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isReply
-                                      ? Colors.grey[50]
-                                      : Colors.transparent,
-                                  border: isReply
-                                      ? Border(
-                                          left: BorderSide(
-                                            color: Colors.orange.shade200,
-                                            width: 2,
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Colors.orange.shade100,
-                                    child: Text(
-                                      comment.username.isNotEmpty
-                                          ? comment.username[0].toUpperCase()
-                                          : "?",
-                                    ),
-                                  ),
-                                  title: Text(
-                                    "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: isReply ? 12 : 13,
-                                      color: isReply
-                                          ? Colors.grey[600]
-                                          : Colors.black,
-                                    ),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(comment.content),
-                                      const SizedBox(height: 4),
-                                      GestureDetector(
-                                        onTap: () {
-                                          setModalState(() {
-                                            selectedParentId =
-                                                comment.commentId;
-
-                                            selectedParentRootId =
-                                                comment.parentCommentId ??
-                                                comment.commentId;
-
-                                            selectedUsername = comment.username;
-                                          });
-                                        },
-                                        child: const Text(
-                                          "Yanıtla",
-                                          style: TextStyle(
-                                            color: Colors.blue,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  trailing: Text(
-                                    DateFormat(
-                                      'dd.MM HH:mm',
-                                    ).format(comment.createdAt),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-
-                // YANITLAMA ÇUBUĞU
-                if (selectedParentId != null)
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) => Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    color: Colors.grey[100],
+                  ),
+                  const Text(
+                    "Yorumlar",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const Divider(),
+
+                  Expanded(
+                    child: sortedComments.isEmpty
+                        ? const Center(child: Text("Henüz yorum yapılmamış."))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: sortedComments.length,
+                            itemBuilder: (context, index) {
+                              final comment = sortedComments[index];
+                              final isReply = comment.parentCommentId != null;
+
+                              final isMyComment =
+                                  _currentUserId != null &&
+                                  comment.userId == _currentUserId;
+
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  left: isReply ? 45.0 : 0.0,
+                                  right: isReply ? 10.0 : 0.0,
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isReply
+                                        ? Colors.grey[50]
+                                        : Colors.transparent,
+                                    border: isReply
+                                        ? Border(
+                                            left: BorderSide(
+                                              color: Colors.orange.shade200,
+                                              width: 2,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: Colors.orange.shade100,
+                                      backgroundImage:
+                                          (comment.profileImage != null &&
+                                              comment.profileImage!.isNotEmpty)
+                                          ? CachedNetworkImageProvider(
+                                              comment.profileImage!,
+                                            )
+                                          : null,
+
+                                      child:
+                                          (comment.profileImage != null &&
+                                              comment.profileImage!.isNotEmpty)
+                                          ? null
+                                          : Text(
+                                              comment.username.isNotEmpty
+                                                  ? comment.username[0]
+                                                        .toUpperCase()
+                                                  : "?",
+                                              style: TextStyle(
+                                                color: Colors.orange.shade900,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                    ),
+                                    title: Text(
+                                      "${comment.username}${isReply ? ' (Yanıtladı)' : ''}",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: isReply ? 12 : 13,
+                                        color: isReply
+                                            ? Colors.grey[600]
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(comment.content),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () {
+                                                setModalState(() {
+                                                  selectedParentId =
+                                                      comment.commentId;
+                                                  selectedParentRootId =
+                                                      comment.parentCommentId ??
+                                                      comment.commentId;
+                                                  selectedUsername =
+                                                      comment.username;
+                                                });
+                                              },
+                                              child: const Text(
+                                                "Yanıtla",
+                                                style: TextStyle(
+                                                  color: Colors.blue,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                            if (isMyComment) ...[
+                                              const SizedBox(width: 15),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  _deleteMyComment(
+                                                    comment.commentId,
+                                                    setModalState,
+                                                  );
+                                                },
+                                                child: const Text(
+                                                  "Sil",
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Text(
+                                      DateFormat(
+                                        'dd.MM HH:mm',
+                                      ).format(comment.createdAt),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+
+                  if (selectedParentId != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      color: Colors.grey[100],
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "$selectedUsername kişisine yanıt veriliyor...",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => setModalState(() {
+                              selectedParentId = null;
+                              selectedUsername = null;
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+                      left: 10,
+                      right: 10,
+                      top: 10,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            "$selectedUsername kişisine yanıt veriliyor...",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
+                          child: TextField(
+                            controller: _commentController,
+                            autofocus: selectedParentId != null,
+                            decoration: InputDecoration(
+                              hintText: selectedParentId == null
+                                  ? "Yorum ekle..."
+                                  : "Yanıtınızı yazın...",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 15,
+                              ),
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => setModalState(() {
-                            selectedParentId = null;
-                            selectedUsername = null;
-                          }),
+                          icon: const Icon(Icons.send, color: Colors.orange),
+                          onPressed: () async {
+                            FocusScope.of(context).unfocus();
+                            await _sendReplyComment();
+
+                            if (mounted) {
+                              Navigator.pop(context);
+
+                              _loadComments();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Yorum gönderildi."),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+
+                              setState(() {
+                                selectedParentId = null;
+                                selectedParentRootId = null;
+                                selectedUsername = null;
+                              });
+                            }
+                          },
                         ),
                       ],
                     ),
                   ),
-
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 10,
-                    left: 10,
-                    right: 10,
-                    top: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _commentController,
-                          autofocus: selectedParentId != null,
-                          decoration: InputDecoration(
-                            hintText: selectedParentId == null
-                                ? "Yorum ekle..."
-                                : "Yanıtınızı yazın...",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Colors.orange),
-                        onPressed: () async {
-                          await _sendReplyComment();
-                          Navigator.pop(context);
-                          setState(() {
-                            selectedParentId = null;
-                            selectedParentRootId = null;
-                            selectedUsername = null;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -508,12 +655,26 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Colors.red[100],
-                              child: Text(
-                                liker.username.isNotEmpty
-                                    ? liker.username[0].toUpperCase()
-                                    : "?",
-                                style: const TextStyle(color: Colors.red),
-                              ),
+                              backgroundImage:
+                                  (liker.profileImage != null &&
+                                      liker.profileImage!.isNotEmpty)
+                                  ? CachedNetworkImageProvider(
+                                      liker.profileImage!,
+                                    )
+                                  : null,
+                              child:
+                                  (liker.profileImage != null &&
+                                      liker.profileImage!.isNotEmpty)
+                                  ? null
+                                  : Text(
+                                      liker.username.isNotEmpty
+                                          ? liker.username[0].toUpperCase()
+                                          : "?",
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                             title: Text(
                               liker.username,

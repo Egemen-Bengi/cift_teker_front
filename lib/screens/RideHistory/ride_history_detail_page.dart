@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cift_teker_front/formatter/parse_map_data.dart';
 import 'package:cift_teker_front/models/requests/sharedRoute_request.dart';
 import 'package:cift_teker_front/models/responses/rideHistory_response.dart';
+import 'package:cift_teker_front/services/rideHistory_service.dart';
 import 'package:cift_teker_front/services/sharedRoute_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -21,6 +22,7 @@ class RideDetailMapPage extends StatefulWidget {
 }
 
 class _RideDetailMapPageState extends State<RideDetailMapPage> {
+  final _rideHistoryService = RideHistoryService();
   final _mapController = Completer<GoogleMapController>();
   final _parser = MapDataParser();
   final _polylines = <Polyline>{};
@@ -30,6 +32,7 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
   final _descController = TextEditingController();
   LatLng? _initialPosition;
   bool _isSharing = false;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -266,6 +269,101 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
   String _formatDate(DateTime dt) =>
       DateFormat('dd MMMM yyyy HH:mm').format(dt);
 
+  void _confirmAndDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Sürüşü Sil"),
+        content: const Text(
+          "Bu sürüş kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _performDelete();
+            },
+            child: const Text("Sil", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performDelete() async {
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      final token = await _storage.read(key: "auth_token");
+      if (token == null) throw "Oturum bilgisi bulunamadı.";
+
+      await _rideHistoryService.deleteMyRideHistory(
+        widget.ride.historyId,
+        token,
+      );
+
+      if (mounted) {
+        _showSuccessModal();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Silme işlemi başarısız: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
+
+  void _showSuccessModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        contentPadding: const EdgeInsets.all(20),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 60),
+            SizedBox(height: 16),
+            Text(
+              "Başarılı!",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Sürüş kaydı silindi.\nYönlendiriliyorsunuz...",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ride = widget.ride;
@@ -277,7 +375,7 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
         onBackButtonPressed: _goBackToRideHistory,
         showBackButton: true,
         actions: [
-          _isSharing
+          (_isSharing || _isDeleting)
               ? const Padding(
                   padding: EdgeInsets.all(12.0),
                   child: CircularProgressIndicator(
@@ -285,9 +383,23 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
                     strokeWidth: 2,
                   ),
                 )
-              : IconButton(
-                  icon: const Icon(Icons.share),
-                  onPressed: _openShareDialog,
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.redAccent,
+                      ),
+                      tooltip: "Sürüşü Sil",
+                      onPressed: _confirmAndDelete,
+                    ),
+
+                    IconButton(
+                      icon: const Icon(Icons.share),
+                      onPressed: _openShareDialog,
+                    ),
+                  ],
                 ),
         ],
       ),
@@ -348,7 +460,7 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
                     _buildInfoRow(
                       icon: Icons.people,
                       label: "Etkinlik",
-                      value: "Grup Sürüşü (ID: ${ride.groupEventId})",
+                      value: "${ride.title}",
                       color: Colors.purple.shade700,
                     ),
                 ],

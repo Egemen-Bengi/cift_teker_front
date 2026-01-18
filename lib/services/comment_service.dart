@@ -37,7 +37,10 @@ class CommentService {
         "/deleteComment/$commentId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
-      return ApiResponse.fromJson(response.data, (json) => json as String);
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => (json ?? "İşlem Başarılı").toString(),
+      );
     } on DioException catch (e) {
       throw Exception("deleteComment hatası: ${e.response?.data}");
     }

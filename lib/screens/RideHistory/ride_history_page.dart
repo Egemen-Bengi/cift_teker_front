@@ -92,9 +92,14 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
       _selectedHistoryId = ride.historyId;
     });
 
-    Navigator.of(context).push(
+    Navigator.push(
+      context,
       MaterialPageRoute(builder: (context) => RideDetailMapPage(ride: ride)),
-    );
+    ).then((value) {
+      if (value == true) {
+        _loadRides();
+      }
+    });
   }
 
   @override
