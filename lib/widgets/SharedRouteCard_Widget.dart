@@ -655,12 +655,26 @@ class _SharedRouteCardState extends State<SharedRouteCard> {
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Colors.red[100],
-                              child: Text(
-                                liker.username.isNotEmpty
-                                    ? liker.username[0].toUpperCase()
-                                    : "?",
-                                style: const TextStyle(color: Colors.red),
-                              ),
+                              backgroundImage:
+                                  (liker.profileImage != null &&
+                                      liker.profileImage!.isNotEmpty)
+                                  ? CachedNetworkImageProvider(
+                                      liker.profileImage!,
+                                    )
+                                  : null,
+                              child:
+                                  (liker.profileImage != null &&
+                                      liker.profileImage!.isNotEmpty)
+                                  ? null
+                                  : Text(
+                                      liker.username.isNotEmpty
+                                          ? liker.username[0].toUpperCase()
+                                          : "?",
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                             title: Text(
                               liker.username,
