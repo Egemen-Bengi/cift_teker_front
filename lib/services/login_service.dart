@@ -28,16 +28,20 @@ class LoginService {
       return loginData;
     } else if (response.statusCode == 401 || response.statusCode == 403) {
       throw Exception(
-          "Login failed: ${response.statusCode} - ${response.body}");
+        "Login failed: ${response.statusCode} - ${response.body}",
+      );
     } else {
       throw Exception(
-          "Login failed: ${response.statusCode} - ${response.body}");
+        "Login failed: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 
   /// Şifre güncelleme
   Future<String> updatePassword(
-      UpdatePasswordRequest request, String token) async {
+    UpdatePasswordRequest request,
+    String token,
+  ) async {
     final url = Uri.parse("$baseUrl/updatePassword");
 
     final response = await http.patch(
@@ -53,7 +57,48 @@ class LoginService {
       return response.body;
     } else {
       throw Exception(
-          "Password update failed: ${response.statusCode} - ${response.body}");
+        "Password update failed: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
+
+  Future<void> forgotPassword({required String email}) async {
+    final url = Uri.parse("$baseUrl/forgot-password");
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"email": email}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return;
+    } else {
+      throw Exception(
+        "Forgot password failed: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse("$baseUrl/reset-password");
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "email": email,
+        "code": code,
+        "newPassword": newPassword,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return;
+    } else {
+      throw Exception(
+        "Reset password failed: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 }

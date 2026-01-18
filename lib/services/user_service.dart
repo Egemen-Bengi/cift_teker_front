@@ -181,26 +181,4 @@ class UserService {
       }
     }
   }
-
-  Future<void> forgotPassword({required String email}) async {
-    await _dio.post(
-      "/auth/forgot-password",
-      data: {"email": email},
-    );
-  }
-
-  Future<void> resetPassword({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) async {
-    await _dio.post(
-      "/auth/reset-password",
-      data: {
-        "email": email,
-        "code": code,
-        "newPassword": newPassword,
-      },
-    );
-  }
 }

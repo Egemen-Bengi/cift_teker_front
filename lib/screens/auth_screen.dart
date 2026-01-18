@@ -51,7 +51,7 @@ class _AuthPageState extends State<AuthPage> {
 
   final phoneMaskFormatter = MaskTextInputFormatter(
     mask: '+90 (###) ### ## ##',
-    filter: { "#": RegExp(r'[0-9]') },
+    filter: {"#": RegExp(r'[0-9]')},
   );
 
   void _showAlertDialog(String title, String message) {
@@ -186,7 +186,6 @@ class _AuthPageState extends State<AuthPage> {
       final token = resp.token;
       if (token != null && token.isNotEmpty) {
         await storage.write(key: "auth_token", value: token);
-
       } else {
         throw Exception("Token boş, login başarısız");
       }
@@ -206,8 +205,7 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-
- Future<void> _showForgotPasswordDialog() async {
+  Future<void> _showForgotPasswordDialog() async {
     final TextEditingController emailController = TextEditingController();
 
     await showDialog(
@@ -218,9 +216,7 @@ class _AuthPageState extends State<AuthPage> {
         content: TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: "Email",
-          ),
+          decoration: const InputDecoration(labelText: "Email"),
         ),
         actions: [
           TextButton(
@@ -238,7 +234,7 @@ class _AuthPageState extends State<AuthPage> {
               }
 
               try {
-                await UserService().forgotPassword(email: email);
+                await LoginService().forgotPassword(email: email);
 
                 if (!context.mounted) return;
                 Navigator.pop(context);
@@ -272,25 +268,19 @@ class _AuthPageState extends State<AuthPage> {
             TextField(
               controller: TextEditingController(text: email),
               readOnly: true,
-              decoration: const InputDecoration(
-                labelText: "Email",
-              ),
+              decoration: const InputDecoration(labelText: "Email"),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: codeController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Doğrulama Kodu",
-              ),
+              decoration: const InputDecoration(labelText: "Doğrulama Kodu"),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Yeni Şifre",
-              ),
+              decoration: const InputDecoration(labelText: "Yeni Şifre"),
             ),
           ],
         ),
@@ -306,23 +296,17 @@ class _AuthPageState extends State<AuthPage> {
               final newPassword = passwordController.text.trim();
 
               if (code.isEmpty || newPassword.isEmpty) {
-                _showAlertDialog(
-                  "Hata",
-                  "Tüm alanları doldurunuz.",
-                );
+                _showAlertDialog("Hata", "Tüm alanları doldurunuz.");
                 return;
               }
 
               if (!_isValidPassword(newPassword)) {
-                _showAlertDialog(
-                  "Hata",
-                  "Şifre en az 5 karakter olmalıdır.",
-                );
+                _showAlertDialog("Hata", "Şifre en az 5 karakter olmalıdır.");
                 return;
               }
 
               try {
-                await UserService().resetPassword(
+                await LoginService().resetPassword(
                   email: email,
                   code: code,
                   newPassword: newPassword,
@@ -331,10 +315,7 @@ class _AuthPageState extends State<AuthPage> {
                 if (!context.mounted) return;
                 Navigator.pop(context);
 
-                _showAlertDialog(
-                  "Başarılı",
-                  "Şifreniz başarıyla güncellendi.",
-                );
+                _showAlertDialog("Başarılı", "Şifreniz başarıyla güncellendi.");
               } catch (e) {
                 _showAlertDialog(
                   "Hata",
@@ -347,7 +328,7 @@ class _AuthPageState extends State<AuthPage> {
       ),
     );
   }
-  
+
   final FocusNode _usernameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
@@ -368,16 +349,26 @@ class _AuthPageState extends State<AuthPage> {
   Widget _criteriaRow(String text, bool ok) {
     return Row(
       children: [
-        Icon(ok ? Icons.check_circle : Icons.radio_button_unchecked,
-             color: ok ? Colors.green : Colors.grey, size: 18),
+        Icon(
+          ok ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: ok ? Colors.green : Colors.grey,
+          size: 18,
+        ),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: ok ? Colors.green : Colors.grey, fontSize: 13)),
+        Text(
+          text,
+          style: TextStyle(
+            color: ok ? Colors.green : Colors.grey,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }
 
   Widget _usernameCriteria() {
-    if (_usernameController.text.isEmpty && !_usernameFocus.hasFocus) return const SizedBox.shrink();
+    if (_usernameController.text.isEmpty && !_usernameFocus.hasFocus)
+      return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -389,12 +380,14 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _emailCriteria() {
-    if (_emailController.text.isEmpty && !_emailFocus.hasFocus) return const SizedBox.shrink();
+    if (_emailController.text.isEmpty && !_emailFocus.hasFocus)
+      return const SizedBox.shrink();
     return _criteriaRow('Geçerli e-mail formatı', _eValid);
   }
 
   Widget _passwordCriteria() {
-    if (_passwordController.text.isEmpty && !_passwordFocus.hasFocus) return const SizedBox.shrink();
+    if (_passwordController.text.isEmpty && !_passwordFocus.hasFocus)
+      return const SizedBox.shrink();
     return _criteriaRow('En az 5 karakter', _pMin);
   }
 
@@ -471,7 +464,11 @@ class _AuthPageState extends State<AuthPage> {
                       TextFormField(
                         controller: _usernameController,
                         focusNode: _usernameFocus,
-                        onChanged: (val) { setState(() { _validateUsername(val); }); },
+                        onChanged: (val) {
+                          setState(() {
+                            _validateUsername(val);
+                          });
+                        },
                         decoration: const InputDecoration(
                           labelText: 'Kullanıcı Adı',
                           border: OutlineInputBorder(),
@@ -505,7 +502,9 @@ class _AuthPageState extends State<AuthPage> {
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                             onPressed: () {
                               setState(() {
@@ -516,7 +515,8 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                         obscureText: _obscurePassword,
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Şifre gerekli';
+                          if (value == null || value.isEmpty)
+                            return 'Şifre gerekli';
                           if (!_isValidPassword(value)) {
                             return 'Şifre en az 5 karakter olmalı';
                           }
