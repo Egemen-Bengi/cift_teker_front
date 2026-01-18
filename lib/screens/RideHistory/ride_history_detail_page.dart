@@ -348,7 +348,7 @@ class _RideDetailMapPageState extends State<RideDetailMapPage> {
                     _buildInfoRow(
                       icon: Icons.people,
                       label: "Etkinlik",
-                      value: "Grup Sürüşü (ID: ${ride.groupEventId})",
+                      value: "${ride.title}",
                       color: Colors.purple.shade700,
                     ),
                 ],

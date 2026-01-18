@@ -7,7 +7,9 @@ class RideHistoryResponse {
   final DateTime startDateTime;
   final DateTime endDateTime;
   final int userId;
-  final int? groupEventId; // ride event her zaman bir group evente bağlı olmayabilir
+  final int? groupEventId;
+  final String? title;
+
   RideHistoryResponse({
     required this.historyId,
     required this.mapData,
@@ -18,6 +20,7 @@ class RideHistoryResponse {
     required this.endDateTime,
     required this.userId,
     this.groupEventId,
+    this.title,
   });
 
   factory RideHistoryResponse.fromJson(Map<String, dynamic> json) {
@@ -31,6 +34,7 @@ class RideHistoryResponse {
       endDateTime: DateTime.parse(json['endDateTime']),
       userId: json['userId'],
       groupEventId: json['groupEventId'], // null gelebilir
+      title: json['title'],
     );
   }
 }
